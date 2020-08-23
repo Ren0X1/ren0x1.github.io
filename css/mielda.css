@@ -12,13 +12,9 @@
 }
 
 .contents-2mQqc9 > img[src*="277553344766279692"] ~ .header-23xsNx > .username-1A8OIy::after {
-    content: "🔥 DEV";
+    content: "<img style="height: 15px" src="https://cdn.discordapp.com/emojis/677102298958266379.gif?v=1"/> DEV";
 }
 
 .contents-2mQqc9 > img[src*="482689860700995586"] ~ .header-23xsNx > .username-1A8OIy::after {
     content: "🔥 DEV";
-}
-
-.activity-2Gy-9S da-activity {
-    content: "<img style="height: 15px" src="https://cdn.discordapp.com/emojis/677102298958266379.gif?v=1"/>";
 }
