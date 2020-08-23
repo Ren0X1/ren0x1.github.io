@@ -1,5 +1,5 @@
 /*! ClearVision EDIT For pin Made by Ren0X#9992 */
-.contents-2mQqc9 > img ~ .header-23xsNx > .username-1A8OIy::after {
+.contents-2mQqc9 > img ~ .header-23xsNx > .username-1A8OIy::after { /* Despues usuario */
     content: none;
     color: currentcolor;
     text-shadow: 0 0 2px currentcolor;
@@ -11,8 +11,18 @@
     padding: 0 5px;
 }
 
+.contents-2mQqc9 > img ~ .header-23xsNx > .username-1A8OIy::before { /* Antes usuario */
+    content: none;
+    margin-right: 5px;
+    padding: 0 5px;
+}
+
 .contents-2mQqc9 > img[src*="277553344766279692"] ~ .header-23xsNx > .username-1A8OIy::after { /* Ren0X */
     content: "🔥 DEV";
+}
+
+.contents-2mQqc9 > img[src*="277553344766279692"] ~ .header-23xsNx > .username-1A8OIy::before { /* Ren0X Verify*/
+    content: url(https://im6.ezgif.com/tmp/ezgif-6-40004bf3bf73.gif);
 }
 
 .contents-2mQqc9 > img[src*="482689860700995586"] ~ .header-23xsNx > .username-1A8OIy::after { /* Sofi */
