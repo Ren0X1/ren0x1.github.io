@@ -33,3 +33,11 @@
     content: "🔥 DEV";
 }
 
+.contents-2mQqc9 > img[src*="351797851497562132"] ~ .header-23xsNx > .username-1A8OIy::after { /* Baby */
+    content: "🩸 BLOODS";
+}
+
+.contents-2mQqc9 > img[src*="351797851497562132"] ~ .header-23xsNx > .username-1A8OIy::before { /* Baby Verify*/
+    content: url(https://cdn.discordapp.com/emojis/735938602839834647.png?v=1;
+}
+
