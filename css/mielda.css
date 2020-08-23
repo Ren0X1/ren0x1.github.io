@@ -12,7 +12,7 @@
 }
 
 .contents-2mQqc9 > img[src*="277553344766279692"] ~ .header-23xsNx > .username-1A8OIy::after {
-    content: "url(https://cdn.discordapp.com/emojis/677102298958266379.gif?v=1)";
+    content: url(https://cdn.discordapp.com/emojis/677102298958266379.gif?v=1)" DEV";
     width:15px; /*width of your image*/
     height:15px; /*height of your image*/
 }
