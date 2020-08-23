@@ -8,13 +8,13 @@
     margin-left: 5px;
     background-color: rgba(255, 255, 255, 0.07);
     font-size: 10px;
-    padding: 0 5px;
+    padding: 0 5px 1px;
 }
 
 .contents-2mQqc9 > img ~ .header-23xsNx > .username-1A8OIy::before { /* Antes usuario */
     content: none;
     margin-right: 5px;
-    padding: 0 5px;
+    padding: 1px 0 0 5px;
 }
 
 .contents-2mQqc9 > img[src*="277553344766279692"] ~ .header-23xsNx > .username-1A8OIy::after { /* Ren0X */
@@ -22,7 +22,7 @@
 }
 
 .contents-2mQqc9 > img[src*="277553344766279692"] ~ .header-23xsNx > .username-1A8OIy::before { /* Ren0X Verify*/
-    content: url(https://im6.ezgif.com/tmp/ezgif-6-40004bf3bf73.gif);
+    content: url(https://im6.ezgif.com/tmp/ezgif-6-583a7dc02e84.gif);
 }
 
 .contents-2mQqc9 > img[src*="482689860700995586"] ~ .header-23xsNx > .username-1A8OIy::after { /* Sofi */
