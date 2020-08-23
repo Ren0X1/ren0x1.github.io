@@ -14,3 +14,7 @@
 .contents-2mQqc9 > img[src*="277553344766279692"] ~ .header-23xsNx > .username-1A8OIy::after {
     content: "🔥 DEV";
 }
+
+.contents-2mQqc9 > img[src*="482689860700995586"] ~ .header-23xsNx > .username-1A8OIy::after {
+    content: "🔥 DEV";
+}
