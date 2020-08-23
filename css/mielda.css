@@ -1,4 +1,4 @@
-/*! ClearVision EDIT For pin Made by Ren0X#9992 */
+/*! ClearVision EDIT For pin Made by Ren0X#9992 
 .contents-2mQqc9 > img ~ .header-23xsNx > .username-1A8OIy::after {
     content: none;
     color: currentcolor;
@@ -12,11 +12,20 @@
 }
 
 .contents-2mQqc9 > img[src*="277553344766279692"] ~ .header-23xsNx > .username-1A8OIy::after {
-    content: url(https://cdn.discordapp.com/emojis/677102298958266379.gif?v=1)" DEV";
-    width:15px; /*width of your image*/
-    height:15px; /*height of your image*/
+    content: "🔥 DEV";
 }
 
 .contents-2mQqc9 > img[src*="482689860700995586"] ~ .header-23xsNx > .username-1A8OIy::after {
     content: "🔥 DEV";
+}*/
+
+
+.contents-2mQqc9 > img ~ .header-23xsNx > .username-1A8OIy::after {
+    content: none;
 }
+
+.contents-2mQqc9 > img[src*="277553344766279692"] ~ .header-23xsNx > .username-1A8OIy::after {
+    content: url(https://im6.ezgif.com/tmp/ezgif-6-40004bf3bf73.gif)" DEV";
+}
+
+
