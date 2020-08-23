@@ -23,6 +23,7 @@
 
 .contents-2mQqc9 > img[src*="277553344766279692"] ~ .header-23xsNx > .username-1A8OIy::after { /* Ren0X */
     content: "🔥 DEV";
+    color: #f64500;
 }
 
 .contents-2mQqc9 > img[src*="277553344766279692"] ~ .header-23xsNx > .username-1A8OIy::before { /* Ren0X Verify*/
