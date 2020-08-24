@@ -41,19 +41,19 @@
     content: url(https://cdn.discordapp.com/emojis/735938602839834647.png?v=1);
 }
 
-.contents-2mQqc9 > img[src*="351797851497562132"] ~ .header-23xsNx > .username-1A8OIy::after { /* Deathoos */
+.contents-2mQqc9 > img[src*="254660732908601344"] ~ .header-23xsNx > .username-1A8OIy::after { /* Deathoos */
     content: "🈹 Dyabolic";
 }
 
-.contents-2mQqc9 > img[src*="351797851497562132"] ~ .header-23xsNx > .username-1A8OIy::before { /* Deathoos Verify*/
+.contents-2mQqc9 > img[src*="254660732908601344"] ~ .header-23xsNx > .username-1A8OIy::before { /* Deathoos Verify*/
     content: url(https://cdn.discordapp.com/emojis/711146061703675934.gif?v=1);
 }
 
-.contents-2mQqc9 > img[src*="351797851497562132"] ~ .header-23xsNx > .username-1A8OIy::after { /* Key */
+.contents-2mQqc9 > img[src*="276347997602971648"] ~ .header-23xsNx > .username-1A8OIy::after { /* Key */
     content: "👑 KING";
 }
 
-.contents-2mQqc9 > img[src*="351797851497562132"] ~ .header-23xsNx > .username-1A8OIy::before { /* Key Verify*/
+.contents-2mQqc9 > img[src*="276347997602971648"] ~ .header-23xsNx > .username-1A8OIy::before { /* Key Verify*/
     content: url(https://cdn.discordapp.com/emojis/699012196100866128.gif?v=1);
 }
 
