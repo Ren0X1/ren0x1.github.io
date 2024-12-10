@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minecraft - ¡Jugar!</title>
+    <title>Los Colegones</title>
+	<link rel="icon" type="image/x-icon" href="./favicon.ico">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -13,14 +14,23 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background: url('https://cdn.pixabay.com/photo/2015/03/26/09/54/minecraft-691137_1280.jpg') no-repeat center center/cover;
+            background: url('./Designer.jpeg') no-repeat center center/cover;
         }
         .container {
             text-align: center;
-            background: rgba(0, 0, 0, 0.6);
+            background: rgba(0, 0, 0, 0.95);
             padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            border-radius: 1px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+        }
+
+		.container2 {
+			display: flex;
+			flex-direction: column;
+			flex-wrap: nowrap;
+			align-content: center;
+			justify-content: center;
+			align-items: center;
         }
         h1 {
             color: #fff;
@@ -28,32 +38,40 @@
             font-size: 3rem;
         }
         button {
-            background-color: #28a745;
+            background-color: #a72828;
             color: #fff;
             border: none;
             padding: 15px 30px;
             font-size: 1.2rem;
-            border-radius: 10px;
+            border-radius: 2px;
             cursor: pointer;
             transition: background-color 0.3s ease;
         }
         button:hover {
-            background-color: #218838;
+            background-color: #6d1b1b;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>¡Bienvenido a Minecraft!</h1>
-        <button onclick="jugar()">Jugar</button>
+		<div class="container2">
+			<h1>Los Colegones</h1>
+			<img src="./colegone1024.png" width="350" alt="Logo del server">
+		</div>
+        <button onclick="jugar()">Copiar IP</button>
+		<button onclick="admin()">Admin panel</button>
     </div>
 
     <script>
         function jugar() {
-            // Aquí puedes redirigir a un servidor o realizar alguna acción
-            alert("¡Redirigiendo al servidor de Minecraft!");
-            window.location.href = "https://minecraft.net";
+            navigator.clipboard.writeText("play.loscolegones.com");
         }
+
+		function admin() {
+			setTimeout(() => {
+                window.location.href = "https://play.loscolegones.com";
+            }, 1000);
+		}
     </script>
 </body>
 </html>
