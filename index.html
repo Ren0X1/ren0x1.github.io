@@ -32,6 +32,17 @@
 			justify-content: center;
 			align-items: center;
         }
+
+        .container3 {
+            margin-top: 10px;
+			display: flex;
+			flex-direction: column;
+			flex-wrap: nowrap;
+			align-content: center;
+			justify-content: center;
+			align-items: center;
+        }
+
         h1 {
             color: #fff;
             margin-bottom: 20px;
@@ -60,6 +71,9 @@
 		</div>
         <button onclick="jugar()">Copiar IP</button>
 		<button onclick="admin()">Admin panel</button>
+        <div class="container3">
+			<button onclick="mapa()">LosColegones Live Map</button>
+		</div>
     </div>
 
     <script>
@@ -70,6 +84,12 @@
 		function admin() {
 			setTimeout(() => {
                 window.location.href = "https://play.loscolegones.com";
+            }, 1000);
+		}
+
+        function mapa() {
+			setTimeout(() => {
+                window.location.href = "http://play.loscolegones.com:8123/";
             }, 1000);
 		}
     </script>
