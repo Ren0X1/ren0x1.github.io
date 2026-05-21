@@ -1,6 +1,8 @@
 -- ╔══════════════════════════════════════════════════════════╗
--- ║  PIBES MECÁNICOS - Schema para Supabase                ║
+-- ║  PIBES MECÁNICOS - Schema v2 (completo desde cero)     ║
 -- ║  Ejecutar en: Supabase Dashboard > SQL Editor           ║
+-- ║  ⚠️ SOLO si es un proyecto NUEVO.                       ║
+-- ║  Si ya tienes datos, usa el fichero migration.sql       ║
 -- ╚══════════════════════════════════════════════════════════╝
 
 -- ─── 1. Tablas ───
@@ -8,7 +10,7 @@
 CREATE TABLE profiles (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name       TEXT NOT NULL,
-  email      TEXT NOT NULL UNIQUE,
+  username   TEXT NOT NULL UNIQUE,
   pin        TEXT NOT NULL DEFAULT '1234',
   role       TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
   created_at TIMESTAMPTZ DEFAULT now()
@@ -53,37 +55,41 @@ CREATE TABLE maintenance_records (
   UNIQUE(car_id, type_id)
 );
 
+CREATE TABLE car_parts (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  car_id     UUID NOT NULL REFERENCES cars(id) ON DELETE CASCADE,
+  name       TEXT NOT NULL,
+  reference  TEXT NOT NULL DEFAULT '',
+  url        TEXT DEFAULT '',
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
 -- ─── 2. Índices ───
 
 CREATE INDEX idx_cars_user ON cars(user_id);
 CREATE INDEX idx_km_logs_car ON km_logs(car_id);
 CREATE INDEX idx_maintenance_car ON maintenance_records(car_id);
 CREATE INDEX idx_maintenance_car_type ON maintenance_records(car_id, type_id);
+CREATE INDEX idx_car_parts_car ON car_parts(car_id);
 
 -- ─── 3. Row Level Security ───
--- Usamos el anon key sin auth real, así que permitimos acceso completo.
--- Si más adelante quieres más seguridad, puedes integrar Supabase Auth
--- y cambiar las policies a auth.uid() = user_id.
 
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cars ENABLE ROW LEVEL SECURITY;
 ALTER TABLE km_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE maintenance_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE car_parts ENABLE ROW LEVEL SECURITY;
 
--- Policies permisivas para anon (necesario con RLS habilitado)
 CREATE POLICY "profiles_all" ON profiles FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "cars_all" ON cars FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "km_logs_all" ON km_logs FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "maintenance_all" ON maintenance_records FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "car_parts_all" ON car_parts FOR ALL USING (true) WITH CHECK (true);
 
 -- ─── 4. Datos iniciales ───
--- ¡Cambia estos datos con tus nombres reales!
+-- ¡Cambia estos datos con tus nombres y usuarios reales!
 
-INSERT INTO profiles (name, email, pin, role) VALUES
-  ('Admin', 'admin@pibesmecanicos.com', '1234', 'admin'),
-  ('Carlos', 'carlos@email.com', '1234', 'user'),
-  ('Miguel', 'miguel@email.com', '1234', 'user');
-
--- ─── Listo! ───
--- Ahora copia la URL y anon key de tu proyecto Supabase
--- y pégalas en el fichero .env de tu proyecto.
+INSERT INTO profiles (name, username, pin, role) VALUES
+  ('Admin', 'admin', '1234', 'admin'),
+  ('Carlos', 'carlos', '1234', 'user'),
+  ('Miguel', 'miguel', '1234', 'user');

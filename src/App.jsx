@@ -8,29 +8,21 @@ import AdminPanel from './components/AdminPanel.jsx'
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(() => {
-    try {
-      const saved = sessionStorage.getItem('pm_user')
-      return saved ? JSON.parse(saved) : null
-    } catch { return null }
+    try { const s = sessionStorage.getItem('pm_user'); return s ? JSON.parse(s) : null } catch { return null }
   })
   const [view, setView] = useState('dashboard')
   const [toast, setToast] = useState(null)
 
   const handleLogin = (user) => {
-    setCurrentUser(user)
-    setView('dashboard')
+    setCurrentUser(user); setView('dashboard')
     try { sessionStorage.setItem('pm_user', JSON.stringify(user)) } catch {}
   }
-
   const handleLogout = () => {
-    setCurrentUser(null)
-    setView('dashboard')
+    setCurrentUser(null); setView('dashboard')
     try { sessionStorage.removeItem('pm_user') } catch {}
   }
-
   const onToast = useCallback((message, type = 'success') => {
-    setToast({ message, type })
-    setTimeout(() => setToast(null), 3500)
+    setToast({ message, type }); setTimeout(() => setToast(null), 3500)
   }, [])
 
   if (!currentUser) return <Login onLogin={handleLogin} />

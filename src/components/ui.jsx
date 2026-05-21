@@ -14,9 +14,7 @@ export function Modal({ open, onClose, title, children }) {
       <div style={css.modal} onClick={e => e.stopPropagation()}>
         <div style={{ ...css.flexBetween, marginBottom: 20 }}>
           <h3 style={css.h2}>{title}</h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: theme.muted, cursor: 'pointer' }}>
-            <X size={20} />
-          </button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: theme.muted, cursor: 'pointer' }}><X size={20} /></button>
         </div>
         {children}
       </div>
@@ -44,11 +42,7 @@ export function Loader({ text = 'Cargando...' }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 60, color: theme.muted }}>
       <div style={{ textAlign: 'center' }}>
-        <div style={{
-          width: 32, height: 32, border: `3px solid ${theme.border}`,
-          borderTop: `3px solid ${theme.accent}`, borderRadius: '50%',
-          animation: 'spin 0.8s linear infinite', margin: '0 auto 12px',
-        }} />
+        <div style={{ width: 32, height: 32, border: `3px solid ${theme.border}`, borderTop: `3px solid ${theme.accent}`, borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
         <p style={{ fontSize: 13 }}>{text}</p>
       </div>
@@ -58,19 +52,11 @@ export function Loader({ text = 'Cargando...' }) {
 
 export function Toast({ message, type = 'success', onClose }) {
   if (!message) return null
-  const bg = type === 'error' ? theme.redSoft : theme.greenSoft
   const color = type === 'error' ? theme.red : theme.green
   return (
-    <div style={{
-      position: 'fixed', bottom: 24, right: 24, zIndex: 2000,
-      background: theme.card, border: `1px solid ${color}`,
-      borderRadius: 10, padding: '12px 20px', display: 'flex',
-      alignItems: 'center', gap: 10, boxShadow: `0 4px 24px rgba(0,0,0,0.5)`,
-    }}>
+    <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 2000, background: theme.card, border: `1px solid ${color}`, borderRadius: 10, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 4px 24px rgba(0,0,0,0.5)' }}>
       <span style={{ fontSize: 13, color }}>{message}</span>
-      <button onClick={onClose} style={{ background: 'none', border: 'none', color: theme.muted, cursor: 'pointer' }}>
-        <X size={14} />
-      </button>
+      <button onClick={onClose} style={{ background: 'none', border: 'none', color: theme.muted, cursor: 'pointer' }}><X size={14} /></button>
     </div>
   )
 }

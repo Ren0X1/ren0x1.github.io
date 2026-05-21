@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import {
   Car, Plus, Trash2, AlertTriangle, CheckCircle, Clock,
-  Gauge, Calendar, Settings, Fuel, Save
+  Gauge, Calendar, Settings, Fuel, Save, Package
 } from 'lucide-react'
 import { theme, css } from '../lib/theme.js'
-import { getCars, createCar, deleteCar, getMaintenanceRecords } from '../lib/supabase.js'
+import { getCars, createCar, deleteCar, getMaintenanceRecords, getCarParts } from '../lib/supabase.js'
 import { FUEL_TYPES, TRANS_TYPES, getMaintStatus } from '../lib/constants.js'
 import { Modal, Field, Loader } from './ui.jsx'
 import CarDetail from './CarDetail.jsx'
@@ -16,13 +16,11 @@ function CarFormModal({ open, onClose, onSave }) {
   })
   const [saving, setSaving] = useState(false)
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
-
   const handleSave = async () => {
     if (!form.plate || !form.brand || !form.model) return
     setSaving(true)
     try { await onSave(form) } finally { setSaving(false) }
   }
-
   return (
     <Modal open={open} onClose={onClose} title="Nuevo Coche">
       <div style={css.grid2}>
@@ -55,7 +53,7 @@ function CarFormModal({ open, onClose, onSave }) {
 
 export default function Dashboard({ user, onToast }) {
   const [cars, setCars] = useState([])
-  const [carMaintMap, setCarMaintMap] = useState({})
+  const [carMeta, setCarMeta] = useState({})
   const [loading, setLoading] = useState(true)
   const [showNewCar, setShowNewCar] = useState(false)
   const [selectedCarId, setSelectedCarId] = useState(null)
@@ -64,17 +62,14 @@ export default function Dashboard({ user, onToast }) {
     try {
       const data = await getCars(user.id)
       setCars(data)
-      // Load maintenance status for each car
-      const maintMap = {}
+      const meta = {}
       for (const car of data) {
-        maintMap[car.id] = await getMaintenanceRecords(car.id)
+        const [maint, parts] = await Promise.all([getMaintenanceRecords(car.id), getCarParts(car.id)])
+        meta[car.id] = { maint, partsCount: parts.length }
       }
-      setCarMaintMap(maintMap)
-    } catch (err) {
-      onToast('Error cargando coches: ' + err.message, 'error')
-    } finally {
-      setLoading(false)
-    }
+      setCarMeta(meta)
+    } catch (err) { onToast('Error cargando coches: ' + err.message, 'error') }
+    finally { setLoading(false) }
   }
 
   useEffect(() => { loadCars() }, [])
@@ -82,37 +77,22 @@ export default function Dashboard({ user, onToast }) {
   const handleAddCar = async (form) => {
     try {
       await createCar({ ...form, user_id: user.id })
-      setShowNewCar(false)
-      onToast('Coche añadido correctamente')
-      loadCars()
-    } catch (err) {
-      onToast('Error al añadir: ' + err.message, 'error')
-    }
+      setShowNewCar(false); onToast('Coche añadido'); loadCars()
+    } catch (err) { onToast('Error: ' + err.message, 'error') }
   }
 
   const handleDeleteCar = async (id) => {
     if (!confirm('¿Eliminar este coche y todos sus datos?')) return
-    try {
-      await deleteCar(id)
-      onToast('Coche eliminado')
-      loadCars()
-    } catch (err) {
-      onToast('Error al eliminar: ' + err.message, 'error')
-    }
+    try { await deleteCar(id); onToast('Coche eliminado'); loadCars() }
+    catch (err) { onToast('Error: ' + err.message, 'error') }
   }
 
-  // If a car is selected, show detail
   if (selectedCarId) {
     const car = cars.find(c => c.id === selectedCarId)
     if (!car) { setSelectedCarId(null); return null }
     return (
       <div style={css.container}>
-        <CarDetail
-          car={car}
-          onBack={() => { setSelectedCarId(null); loadCars() }}
-          onCarUpdated={loadCars}
-          onToast={onToast}
-        />
+        <CarDetail car={car} onBack={() => { setSelectedCarId(null); loadCars() }} onCarUpdated={loadCars} onToast={onToast} />
       </div>
     )
   }
@@ -127,37 +107,26 @@ export default function Dashboard({ user, onToast }) {
             <h1 style={css.h1}>Mis Coches</h1>
             <p style={css.subtitle}>{cars.length} vehículo{cars.length !== 1 ? 's' : ''} registrado{cars.length !== 1 ? 's' : ''}</p>
           </div>
-          <button onClick={() => setShowNewCar(true)} style={css.btn()}>
-            <Plus size={16} /> Añadir Coche
-          </button>
+          <button onClick={() => setShowNewCar(true)} style={css.btn()}><Plus size={16} /> Añadir Coche</button>
         </div>
 
         {cars.length === 0 ? (
           <div style={{ ...css.card, padding: 48, textAlign: 'center' }}>
             <Car size={48} color={theme.mutedLight} style={{ marginBottom: 12 }} />
             <p style={{ color: theme.muted }}>Aún no tienes coches registrados</p>
-            <button onClick={() => setShowNewCar(true)} style={{ ...css.btn(), marginTop: 12 }}>
-              <Plus size={14} /> Añadir tu primer coche
-            </button>
+            <button onClick={() => setShowNewCar(true)} style={{ ...css.btn(), marginTop: 12 }}><Plus size={14} /> Añadir tu primer coche</button>
           </div>
         ) : (
           <div style={{ display: 'grid', gap: 12 }}>
             {cars.map(car => {
-              const maint = carMaintMap[car.id] || []
+              const m = carMeta[car.id] || { maint: [], partsCount: 0 }
               let overdue = 0, warn = 0
-              maint.forEach(m => {
-                const s = getMaintStatus(m, car.current_km)
-                if (s === 'overdue') overdue++
-                if (s === 'warn') warn++
-              })
+              m.maint.forEach(r => { const s = getMaintStatus(r, car.current_km); if (s === 'overdue') overdue++; if (s === 'warn') warn++ })
               return (
-                <div
-                  key={car.id}
-                  onClick={() => setSelectedCarId(car.id)}
+                <div key={car.id} onClick={() => setSelectedCarId(car.id)}
                   style={{ ...css.card, padding: 0, cursor: 'pointer', transition: 'all .15s', overflow: 'hidden' }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = theme.accent; e.currentTarget.style.background = theme.cardHover }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = theme.border; e.currentTarget.style.background = theme.card }}
-                >
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = theme.border; e.currentTarget.style.background = theme.card }}>
                   <div style={{ padding: 20 }}>
                     <div style={css.flexBetween}>
                       <div>
@@ -165,34 +134,28 @@ export default function Dashboard({ user, onToast }) {
                           <h3 style={{ ...css.h2, fontSize: 18 }}>{car.brand} {car.model}</h3>
                           <span style={css.badge(theme.accentSoft, theme.accent)}>{car.plate}</span>
                         </div>
-                        <div style={{ ...css.flex, gap: 16, marginTop: 8 }}>
+                        <div style={{ ...css.flex, gap: 16, marginTop: 8, flexWrap: 'wrap' }}>
                           <span style={{ ...css.flex, gap: 4, color: theme.muted, fontSize: 13 }}><Gauge size={14} /> {car.current_km.toLocaleString()} km</span>
                           <span style={{ ...css.flex, gap: 4, color: theme.muted, fontSize: 13 }}><Calendar size={14} /> {car.year}</span>
                           <span style={{ ...css.flex, gap: 4, color: theme.muted, fontSize: 13 }}><Settings size={14} /> {car.transmission}</span>
                           <span style={{ ...css.flex, gap: 4, color: theme.muted, fontSize: 13 }}><Fuel size={14} /> {car.fuel}</span>
+                          {m.partsCount > 0 && <span style={{ ...css.flex, gap: 4, color: theme.muted, fontSize: 13 }}><Package size={14} /> {m.partsCount} recambio{m.partsCount !== 1 ? 's' : ''}</span>}
                         </div>
                       </div>
                       <div style={{ ...css.flex, gap: 8 }}>
                         {overdue > 0 && <span style={css.badge(theme.redSoft, theme.red)}><AlertTriangle size={11} /> {overdue}</span>}
                         {warn > 0 && <span style={css.badge(theme.yellowSoft, theme.yellow)}><Clock size={11} /> {warn}</span>}
-                        {overdue === 0 && warn === 0 && maint.length > 0 && (
-                          <span style={css.badge(theme.greenSoft, theme.green)}><CheckCircle size={11} /> Todo OK</span>
-                        )}
-                        <button
-                          onClick={e => { e.stopPropagation(); handleDeleteCar(car.id) }}
-                          style={css.btnSm(theme.redSoft, theme.red)}
-                        >
-                          <Trash2 size={12} />
-                        </button>
+                        {overdue === 0 && warn === 0 && m.maint.length > 0 && <span style={css.badge(theme.greenSoft, theme.green)}><CheckCircle size={11} /> Todo OK</span>}
+                        <button onClick={e => { e.stopPropagation(); handleDeleteCar(car.id) }} style={css.btnSm(theme.redSoft, theme.red)}><Trash2 size={12} /></button>
                       </div>
                     </div>
                   </div>
-                  {maint.length > 0 && (
+                  {m.maint.length > 0 && (
                     <div style={{ height: 3, background: theme.border, display: 'flex' }}>
                       {(() => {
-                        const total = maint.length
-                        const okC = maint.filter(m => getMaintStatus(m, car.current_km) === 'ok').length
-                        const warnC = maint.filter(m => getMaintStatus(m, car.current_km) === 'warn').length
+                        const total = m.maint.length
+                        const okC = m.maint.filter(r => getMaintStatus(r, car.current_km) === 'ok').length
+                        const warnC = m.maint.filter(r => getMaintStatus(r, car.current_km) === 'warn').length
                         return (<>
                           <div style={{ width: `${(okC / total) * 100}%`, background: theme.green }} />
                           <div style={{ width: `${(warnC / total) * 100}%`, background: theme.yellow }} />
@@ -207,7 +170,6 @@ export default function Dashboard({ user, onToast }) {
           </div>
         )}
       </div>
-
       <CarFormModal open={showNewCar} onClose={() => setShowNewCar(false)} onSave={handleAddCar} />
     </div>
   )

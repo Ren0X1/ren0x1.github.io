@@ -5,21 +5,21 @@ import { login } from '../lib/supabase.js'
 import { Field } from './ui.jsx'
 
 export default function Login({ onLogin }) {
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [pin, setPin] = useState('')
   const [showPin, setShowPin] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   const handleLogin = async () => {
-    if (!email || !pin) return setError('Introduce email y PIN')
+    if (!username || !pin) return setError('Introduce usuario y PIN')
     setLoading(true)
     setError('')
     try {
-      const user = await login(email.toLowerCase().trim(), pin)
+      const user = await login(username, pin)
       onLogin(user)
     } catch (err) {
-      setError(err.message || 'Email o PIN incorrecto')
+      setError(err.message || 'Usuario o PIN incorrecto')
     } finally {
       setLoading(false)
     }
@@ -37,13 +37,12 @@ export default function Login({ onLogin }) {
         </div>
 
         <div style={{ ...css.card, padding: 28 }}>
-          <Field label="Email">
+          <Field label="Usuario">
             <input
               style={css.input}
-              type="email"
-              value={email}
-              onChange={e => { setEmail(e.target.value); setError('') }}
-              placeholder="tu@email.com"
+              value={username}
+              onChange={e => { setUsername(e.target.value); setError('') }}
+              placeholder="tu usuario"
               onKeyDown={e => e.key === 'Enter' && handleLogin()}
             />
           </Field>
@@ -83,6 +82,9 @@ export default function Login({ onLogin }) {
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
         </div>
+        <p style={{ ...css.subtitle, textAlign: 'center', marginTop: 16 }}>
+          Demo: admin / 1234
+        </p>
       </div>
     </div>
   )

@@ -1,27 +1,47 @@
 import { useState, useEffect, useMemo } from 'react'
 import {
   Wrench, Edit2, Trash2, ChevronLeft, Gauge, Calendar,
-  Fuel, Settings, TrendingUp, Save, AlertTriangle, CheckCircle, Clock, Plus
+  Fuel, Settings, TrendingUp, Save, AlertTriangle, CheckCircle,
+  Clock, Plus, Package, ExternalLink
 } from 'lucide-react'
 import { theme, css } from '../lib/theme.js'
 import {
   updateCar, getMaintenanceRecords, upsertMaintenanceRecord,
-  deleteMaintenanceRecord, getKmLogs, createKmLog
+  deleteMaintenanceRecord, getKmLogs, createKmLog,
+  getCarParts, createCarPart, deleteCarPart
 } from '../lib/supabase.js'
 import { MAINT_TYPES, FUEL_TYPES, TRANS_TYPES, getMaintStatus } from '../lib/constants.js'
 import { Modal, Field, Stat, StatusBadge, Loader } from './ui.jsx'
 
 const today = new Date().toISOString().split('T')[0]
 
+/* ── Tab Bar ── */
+function TabBar({ tabs, active, onChange }) {
+  return (
+    <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: theme.bg, borderRadius: 10, padding: 4 }}>
+      {tabs.map(t => (
+        <button key={t.id} onClick={() => onChange(t.id)} style={{
+          display: 'flex', alignItems: 'center', gap: 6, flex: 1, justifyContent: 'center',
+          background: active === t.id ? theme.card : 'transparent',
+          color: active === t.id ? theme.white : theme.muted,
+          border: active === t.id ? `1px solid ${theme.border}` : '1px solid transparent',
+          borderRadius: 8, padding: '9px 16px', cursor: 'pointer', fontWeight: 600,
+          fontSize: 13, fontFamily: 'inherit', transition: 'all .15s',
+        }}>
+          {t.icon} {t.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/* ── Modals ── */
 function KmLogModal({ open, onClose, onSave, carKm }) {
   const [km, setKm] = useState(carKm || 0)
   const [date, setDate] = useState(today)
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
-  const handleSave = async () => {
-    setSaving(true)
-    try { await onSave({ km, date, notes }) } finally { setSaving(false) }
-  }
+  const handleSave = async () => { setSaving(true); try { await onSave({ km, date, notes }) } finally { setSaving(false) } }
   return (
     <Modal open={open} onClose={onClose} title="Registrar Kilómetros">
       <Field label="Kilómetros"><input style={css.input} type="number" value={km} onChange={e => setKm(+e.target.value)} /></Field>
@@ -29,9 +49,7 @@ function KmLogModal({ open, onClose, onSave, carKm }) {
       <Field label="Notas"><input style={css.input} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Opcional" /></Field>
       <div style={{ ...css.flex, justifyContent: 'flex-end', marginTop: 8, gap: 8 }}>
         <button onClick={onClose} style={css.btnOutline}>Cancelar</button>
-        <button onClick={handleSave} disabled={saving} style={css.btn()}>
-          <Save size={14} /> {saving ? 'Guardando...' : 'Guardar'}
-        </button>
+        <button onClick={handleSave} disabled={saving} style={css.btn()}><Save size={14} /> {saving ? 'Guardando...' : 'Guardar'}</button>
       </div>
     </Modal>
   )
@@ -39,65 +57,38 @@ function KmLogModal({ open, onClose, onSave, carKm }) {
 
 function MaintModal({ open, onClose, onSave, typeId, existing, currentKm }) {
   const mtype = MAINT_TYPES.find(t => t.id === typeId)
-  const [form, setForm] = useState(
-    existing || {
-      last_km: currentKm, last_date: today,
-      next_km: currentKm + (mtype?.defKm || 10000), next_date: '',
-      cost: 0, notes: '',
-    }
-  )
+  const [form, setForm] = useState(existing || {
+    last_km: currentKm, last_date: today,
+    next_km: currentKm + (mtype?.defKm || 10000), next_date: '', cost: 0, notes: '',
+  })
   const [saving, setSaving] = useState(false)
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
-
   const autoCalcNext = (lastKm, lastDate) => {
     if (!mtype) return
     const nk = lastKm + mtype.defKm
     let nd = form.next_date
-    if (lastDate && mtype.defMonths) {
-      const d = new Date(lastDate)
-      d.setMonth(d.getMonth() + mtype.defMonths)
-      nd = d.toISOString().split('T')[0]
-    }
+    if (lastDate && mtype.defMonths) { const d = new Date(lastDate); d.setMonth(d.getMonth() + mtype.defMonths); nd = d.toISOString().split('T')[0] }
     setForm(f => ({ ...f, last_km: lastKm, last_date: lastDate, next_km: nk, next_date: nd }))
   }
-
-  const handleSave = async () => {
-    setSaving(true)
-    try { await onSave(form) } finally { setSaving(false) }
-  }
-
+  const handleSave = async () => { setSaving(true); try { await onSave(form) } finally { setSaving(false) } }
   return (
     <Modal open={open} onClose={onClose} title={`${mtype?.emoji || '🔧'} ${mtype?.name || 'Mantenimiento'}`}>
       <p style={{ ...css.subtitle, marginBottom: 16 }}>
-        Intervalo recomendado: {mtype?.defKm ? `${mtype.defKm.toLocaleString()} km` : '—'}{mtype?.defMonths ? ` / ${mtype.defMonths} meses` : ''}
+        Intervalo: {mtype?.defKm ? `${mtype.defKm.toLocaleString()} km` : '—'}{mtype?.defMonths ? ` / ${mtype.defMonths} meses` : ''}
       </p>
       <div style={css.grid2}>
-        <Field label="Último cambio (km)">
-          <input style={css.input} type="number" value={form.last_km} onChange={e => autoCalcNext(+e.target.value, form.last_date)} />
-        </Field>
-        <Field label="Fecha último cambio">
-          <input style={css.input} type="date" value={form.last_date} onChange={e => autoCalcNext(form.last_km, e.target.value)} />
-        </Field>
-        <Field label="Próximo cambio (km)">
-          <input style={css.input} type="number" value={form.next_km} onChange={e => set('next_km', +e.target.value)} />
-        </Field>
-        <Field label="Fecha próximo cambio">
-          <input style={css.input} type="date" value={form.next_date} onChange={e => set('next_date', e.target.value)} />
-        </Field>
+        <Field label="Último cambio (km)"><input style={css.input} type="number" value={form.last_km} onChange={e => autoCalcNext(+e.target.value, form.last_date)} /></Field>
+        <Field label="Fecha último cambio"><input style={css.input} type="date" value={form.last_date} onChange={e => autoCalcNext(form.last_km, e.target.value)} /></Field>
+        <Field label="Próximo cambio (km)"><input style={css.input} type="number" value={form.next_km} onChange={e => set('next_km', +e.target.value)} /></Field>
+        <Field label="Fecha próximo cambio"><input style={css.input} type="date" value={form.next_date} onChange={e => set('next_date', e.target.value)} /></Field>
       </div>
       <div style={css.grid2}>
-        <Field label="Coste (€)">
-          <input style={css.input} type="number" value={form.cost} onChange={e => set('cost', +e.target.value)} />
-        </Field>
-        <Field label="Notas">
-          <input style={css.input} value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Marca, taller..." />
-        </Field>
+        <Field label="Coste (€)"><input style={css.input} type="number" value={form.cost} onChange={e => set('cost', +e.target.value)} /></Field>
+        <Field label="Notas"><input style={css.input} value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Marca, taller..." /></Field>
       </div>
       <div style={{ ...css.flex, justifyContent: 'flex-end', marginTop: 8, gap: 8 }}>
         <button onClick={onClose} style={css.btnOutline}>Cancelar</button>
-        <button onClick={handleSave} disabled={saving} style={css.btn()}>
-          <Save size={14} /> {saving ? 'Guardando...' : 'Guardar'}
-        </button>
+        <button onClick={handleSave} disabled={saving} style={css.btn()}><Save size={14} /> {saving ? 'Guardando...' : 'Guardar'}</button>
       </div>
     </Modal>
   )
@@ -107,10 +98,7 @@ function CarEditModal({ open, onClose, onSave, car }) {
   const [form, setForm] = useState({ ...car })
   const [saving, setSaving] = useState(false)
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
-  const handleSave = async () => {
-    setSaving(true)
-    try { await onSave(form) } finally { setSaving(false) }
-  }
+  const handleSave = async () => { setSaving(true); try { await onSave(form) } finally { setSaving(false) } }
   return (
     <Modal open={open} onClose={onClose} title="Editar Coche">
       <div style={css.grid2}>
@@ -132,31 +120,116 @@ function CarEditModal({ open, onClose, onSave, car }) {
       <Field label="Notas"><input style={css.input} value={form.notes || ''} onChange={e => set('notes', e.target.value)} /></Field>
       <div style={{ ...css.flex, justifyContent: 'flex-end', marginTop: 8, gap: 8 }}>
         <button onClick={onClose} style={css.btnOutline}>Cancelar</button>
-        <button onClick={handleSave} disabled={saving} style={css.btn()}>
-          <Save size={14} /> {saving ? 'Guardando...' : 'Guardar'}
-        </button>
+        <button onClick={handleSave} disabled={saving} style={css.btn()}><Save size={14} /> {saving ? 'Guardando...' : 'Guardar'}</button>
       </div>
     </Modal>
   )
 }
 
+function PartFormModal({ open, onClose, onSave }) {
+  const [form, setForm] = useState({ name: '', reference: '', url: '' })
+  const [saving, setSaving] = useState(false)
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+  const handleSave = async () => {
+    if (!form.name) return
+    setSaving(true)
+    try { await onSave(form); setForm({ name: '', reference: '', url: '' }) } finally { setSaving(false) }
+  }
+  return (
+    <Modal open={open} onClose={onClose} title="Añadir Recambio">
+      <Field label="Nombre"><input style={css.input} value={form.name} onChange={e => set('name', e.target.value)} placeholder="Ej: Filtro aceite" /></Field>
+      <Field label="Referencia"><input style={css.input} value={form.reference} onChange={e => set('reference', e.target.value)} placeholder="Ej: OC 593/4" /></Field>
+      <Field label="Enlace (opcional)"><input style={css.input} value={form.url} onChange={e => set('url', e.target.value)} placeholder="https://..." /></Field>
+      <div style={{ ...css.flex, justifyContent: 'flex-end', marginTop: 8, gap: 8 }}>
+        <button onClick={onClose} style={css.btnOutline}>Cancelar</button>
+        <button onClick={handleSave} disabled={saving} style={css.btn()}><Save size={14} /> {saving ? 'Guardando...' : 'Guardar'}</button>
+      </div>
+    </Modal>
+  )
+}
+
+/* ── Parts Tab ── */
+function PartsTab({ carId, parts, onAdd, onDelete }) {
+  const [showAdd, setShowAdd] = useState(false)
+  const blue = '#3b82f6'
+  const blueSoft = 'rgba(59,130,246,0.12)'
+
+  return (
+    <>
+      <div style={{ ...css.card, padding: 0, overflow: 'hidden' }}>
+        <div style={{ ...css.flexBetween, padding: '16px 20px', borderBottom: `1px solid ${theme.border}` }}>
+          <h3 style={css.h3}><Package size={16} style={{ marginRight: 6 }} />Recambios</h3>
+          <button onClick={() => setShowAdd(true)} style={css.btnSm(theme.accent, '#000')}><Plus size={12} /> Añadir</button>
+        </div>
+        {parts.length === 0 ? (
+          <div style={{ padding: 40, textAlign: 'center' }}>
+            <Package size={36} color={theme.mutedLight} style={{ marginBottom: 8 }} />
+            <p style={{ color: theme.muted, fontSize: 13 }}>Sin recambios registrados</p>
+            <button onClick={() => setShowAdd(true)} style={{ ...css.btn(), marginTop: 12 }}><Plus size={14} /> Añadir recambio</button>
+          </div>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr style={{ borderBottom: `1px solid ${theme.border}` }}>
+                <th style={css.th}>Nombre</th>
+                <th style={css.th}>Referencia</th>
+                <th style={css.th}>Enlace</th>
+                <th style={{ ...css.th, width: 60 }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {parts.map(p => (
+                <tr key={p.id} style={{ borderBottom: `1px solid ${theme.border}` }}
+                  onMouseEnter={e => e.currentTarget.style.background = theme.cardHover}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                  <td style={{ ...css.td, fontWeight: 600 }}>{p.name}</td>
+                  <td style={css.td}>
+                    {p.reference ? <span style={css.badge(blueSoft, blue)}>{p.reference}</span> : <span style={{ color: theme.mutedLight, fontSize: 12 }}>—</span>}
+                  </td>
+                  <td style={css.td}>
+                    {p.url ? (
+                      <a href={p.url} target="_blank" rel="noopener noreferrer"
+                        style={{ color: blue, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                        <ExternalLink size={12} /> Ver enlace
+                      </a>
+                    ) : <span style={{ color: theme.mutedLight, fontSize: 12 }}>—</span>}
+                  </td>
+                  <td style={css.td}>
+                    <button onClick={() => onDelete(p.id)} style={css.btnSm(theme.redSoft, theme.red)}><Trash2 size={12} /></button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+      <PartFormModal open={showAdd} onClose={() => setShowAdd(false)} onSave={async (form) => { await onAdd(form); setShowAdd(false) }} />
+    </>
+  )
+}
+
+/* ── Main CarDetail ── */
 export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToast }) {
   const [car, setCar] = useState(initialCar)
   const [maintenance, setMaintenance] = useState([])
   const [kmLogs, setKmLogs] = useState([])
+  const [parts, setParts] = useState([])
   const [loading, setLoading] = useState(true)
   const [showKmModal, setShowKmModal] = useState(false)
   const [editMaintType, setEditMaintType] = useState(null)
   const [showEditCar, setShowEditCar] = useState(false)
+  const [activeTab, setActiveTab] = useState('maint')
 
   const loadData = async () => {
     try {
-      const [maint, logs] = await Promise.all([
+      const [maint, logs, carParts] = await Promise.all([
         getMaintenanceRecords(car.id),
         getKmLogs(car.id),
+        getCarParts(car.id),
       ])
       setMaintenance(maint)
       setKmLogs(logs)
+      setParts(carParts)
     } catch (err) {
       onToast('Error cargando datos: ' + err.message, 'error')
     } finally {
@@ -168,75 +241,62 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
 
   const stats = useMemo(() => {
     let ok = 0, warn = 0, overdue = 0
-    maintenance.forEach(m => {
-      const s = getMaintStatus(m, car.current_km)
-      if (s === 'ok') ok++; else if (s === 'warn') warn++; else overdue++
-    })
+    maintenance.forEach(m => { const s = getMaintStatus(m, car.current_km); if (s === 'ok') ok++; else if (s === 'warn') warn++; else overdue++ })
     return { ok, warn, overdue }
   }, [maintenance, car.current_km])
 
   const handleSaveKm = async (data) => {
     try {
       await createKmLog({ car_id: car.id, km: data.km, date: data.date, notes: data.notes })
-      if (data.km > car.current_km) {
-        const updated = await updateCar(car.id, { current_km: data.km })
-        setCar(updated)
-      }
+      if (data.km > car.current_km) { const updated = await updateCar(car.id, { current_km: data.km }); setCar(updated) }
       setShowKmModal(false)
       onToast('Kilómetros registrados')
       loadData()
-    } catch (err) {
-      onToast('Error: ' + err.message, 'error')
-    }
+    } catch (err) { onToast('Error: ' + err.message, 'error') }
   }
 
   const handleSaveMaint = async (typeId, formData) => {
     try {
-      await upsertMaintenanceRecord({
-        car_id: car.id, type_id: typeId,
-        last_km: formData.last_km, last_date: formData.last_date,
-        next_km: formData.next_km, next_date: formData.next_date,
-        cost: formData.cost, notes: formData.notes,
-      })
+      await upsertMaintenanceRecord({ car_id: car.id, type_id: typeId, ...formData })
       setEditMaintType(null)
       onToast('Mantenimiento actualizado')
       loadData()
-    } catch (err) {
-      onToast('Error: ' + err.message, 'error')
-    }
+    } catch (err) { onToast('Error: ' + err.message, 'error') }
   }
 
   const handleDeleteMaint = async (typeId) => {
-    try {
-      await deleteMaintenanceRecord(car.id, typeId)
-      onToast('Registro eliminado')
-      loadData()
-    } catch (err) {
-      onToast('Error: ' + err.message, 'error')
-    }
+    try { await deleteMaintenanceRecord(car.id, typeId); onToast('Registro eliminado'); loadData() }
+    catch (err) { onToast('Error: ' + err.message, 'error') }
+  }
+
+  const handleAddPart = async (form) => {
+    try { await createCarPart({ car_id: car.id, ...form }); onToast('Recambio añadido'); loadData() }
+    catch (err) { onToast('Error: ' + err.message, 'error') }
+  }
+
+  const handleDeletePart = async (id) => {
+    try { await deleteCarPart(id); onToast('Recambio eliminado'); loadData() }
+    catch (err) { onToast('Error: ' + err.message, 'error') }
   }
 
   const handleEditCar = async (form) => {
     try {
-      const updated = await updateCar(car.id, {
-        plate: form.plate, brand: form.brand, model: form.model,
-        year: form.year, transmission: form.transmission, fuel: form.fuel, notes: form.notes,
-      })
-      setCar(updated)
-      setShowEditCar(false)
-      onToast('Coche actualizado')
-    } catch (err) {
-      onToast('Error: ' + err.message, 'error')
-    }
+      const updated = await updateCar(car.id, { plate: form.plate, brand: form.brand, model: form.model, year: form.year, transmission: form.transmission, fuel: form.fuel, notes: form.notes })
+      setCar(updated); setShowEditCar(false); onToast('Coche actualizado')
+    } catch (err) { onToast('Error: ' + err.message, 'error') }
   }
 
   if (loading) return <Loader text="Cargando datos del coche..." />
 
+  const detailTabs = [
+    { id: 'maint', icon: <Wrench size={15} />, label: 'Mantenimientos' },
+    { id: 'parts', icon: <Package size={15} />, label: 'Recambios' },
+    { id: 'km', icon: <TrendingUp size={15} />, label: 'Kilómetros' },
+  ]
+
   return (
     <div style={{ paddingTop: 24, paddingBottom: 40 }}>
-      <button onClick={onBack} style={{ ...css.btnOutline, marginBottom: 20 }}>
-        <ChevronLeft size={16} /> Volver
-      </button>
+      <button onClick={onBack} style={{ ...css.btnOutline, marginBottom: 20 }}><ChevronLeft size={16} /> Volver</button>
 
       {/* Header */}
       <div style={{ ...css.card, padding: 24, marginBottom: 20, background: `linear-gradient(135deg, ${theme.card} 0%, #1a1a2e 100%)` }}>
@@ -253,12 +313,8 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
             </div>
           </div>
           <div style={{ ...css.flex, gap: 8 }}>
-            <button onClick={() => setShowKmModal(true)} style={css.btn()}>
-              <TrendingUp size={14} /> Registrar km
-            </button>
-            <button onClick={() => setShowEditCar(true)} style={css.btnOutline}>
-              <Edit2 size={14} />
-            </button>
+            <button onClick={() => setShowKmModal(true)} style={css.btn()}><TrendingUp size={14} /> Registrar km</button>
+            <button onClick={() => setShowEditCar(true)} style={css.btnOutline}><Edit2 size={14} /></button>
           </div>
         </div>
       </div>
@@ -271,102 +327,92 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
         <Stat icon={<AlertTriangle size={20} color={theme.red} />} label="Vencidos" value={stats.overdue} color={theme.red} />
       </div>
 
-      {/* Maintenance Table */}
-      <div style={{ ...css.card, padding: 0, overflow: 'hidden', marginBottom: 20 }}>
-        <div style={{ ...css.flexBetween, padding: '16px 20px', borderBottom: `1px solid ${theme.border}` }}>
-          <h3 style={css.h3}><Wrench size={16} style={{ marginRight: 6 }} />Mantenimientos</h3>
-        </div>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-            <thead>
-              <tr style={{ borderBottom: `1px solid ${theme.border}` }}>
-                {['Elemento', 'Estado', 'Último (km)', 'Fecha últ.', 'Próximo (km)', 'Fecha próx.', 'Coste', ''].map((h, i) => (
-                  <th key={i} style={css.th}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {MAINT_TYPES.map(mt => {
-                const m = maintenance.find(x => x.type_id === mt.id)
-                const status = m ? getMaintStatus(m, car.current_km) : null
-                return (
-                  <tr
-                    key={mt.id}
-                    style={{ borderBottom: `1px solid ${theme.border}`, cursor: 'pointer', transition: 'background .1s' }}
-                    onClick={() => setEditMaintType(mt.id)}
-                    onMouseEnter={e => e.currentTarget.style.background = theme.cardHover}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                  >
-                    <td style={{ ...css.td, fontWeight: 600 }}>{mt.emoji} {mt.name}</td>
-                    <td style={css.td}>
-                      {status ? <StatusBadge status={status} /> : <span style={{ color: theme.mutedLight, fontSize: 12 }}>Sin datos</span>}
-                    </td>
-                    <td style={{ ...css.td, color: theme.muted }}>{m ? m.last_km.toLocaleString() : '—'}</td>
-                    <td style={{ ...css.td, color: theme.muted }}>{m?.last_date || '—'}</td>
-                    <td style={{ ...css.td, fontWeight: 600 }}>{m ? m.next_km.toLocaleString() : '—'}</td>
-                    <td style={{ ...css.td, color: theme.muted }}>{m?.next_date || '—'}</td>
-                    <td style={{ ...css.td, color: theme.muted }}>{m?.cost ? `${m.cost}€` : '—'}</td>
-                    <td style={css.td}>
-                      <div style={{ ...css.flex, gap: 4 }}>
-                        <button onClick={e => { e.stopPropagation(); setEditMaintType(mt.id) }} style={css.btnSm(theme.accentSoft, theme.accent)}>
-                          <Edit2 size={12} />
-                        </button>
-                        {m && (
-                          <button onClick={e => { e.stopPropagation(); handleDeleteMaint(mt.id) }} style={css.btnSm(theme.redSoft, theme.red)}>
-                            <Trash2 size={12} />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Tabs */}
+      <TabBar tabs={detailTabs} active={activeTab} onChange={setActiveTab} />
 
-      {/* KM History */}
-      <div style={{ ...css.card, padding: 0, overflow: 'hidden' }}>
-        <div style={{ padding: '16px 20px', borderBottom: `1px solid ${theme.border}` }}>
-          <h3 style={css.h3}><TrendingUp size={16} style={{ marginRight: 6 }} />Historial de Kilómetros</h3>
-        </div>
-        {kmLogs.length === 0 ? (
-          <p style={{ padding: 20, color: theme.muted, textAlign: 'center' }}>Sin registros aún</p>
-        ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-            <thead>
-              <tr style={{ borderBottom: `1px solid ${theme.border}` }}>
-                {['Fecha', 'Kilómetros', 'Notas'].map((h, i) => <th key={i} style={css.th}>{h}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {kmLogs.map(l => (
-                <tr key={l.id} style={{ borderBottom: `1px solid ${theme.border}` }}>
-                  <td style={css.td}>{l.date}</td>
-                  <td style={{ ...css.td, fontWeight: 700 }}>{l.km.toLocaleString()} km</td>
-                  <td style={{ ...css.td, color: theme.muted }}>{l.notes || '—'}</td>
+      {/* Maintenance Tab */}
+      {activeTab === 'maint' && (
+        <div style={{ ...css.card, padding: 0, overflow: 'hidden' }}>
+          <div style={{ padding: '16px 20px', borderBottom: `1px solid ${theme.border}` }}>
+            <h3 style={css.h3}><Wrench size={16} style={{ marginRight: 6 }} />Mantenimientos</h3>
+          </div>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: `1px solid ${theme.border}` }}>
+                  {['Elemento', 'Estado', 'Último (km)', 'Fecha últ.', 'Próximo (km)', 'Fecha próx.', 'Coste', ''].map((h, i) => <th key={i} style={css.th}>{h}</th>)}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+              </thead>
+              <tbody>
+                {MAINT_TYPES.map(mt => {
+                  const m = maintenance.find(x => x.type_id === mt.id)
+                  const status = m ? getMaintStatus(m, car.current_km) : null
+                  return (
+                    <tr key={mt.id} style={{ borderBottom: `1px solid ${theme.border}`, cursor: 'pointer' }}
+                      onClick={() => setEditMaintType(mt.id)}
+                      onMouseEnter={e => e.currentTarget.style.background = theme.cardHover}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                      <td style={{ ...css.td, fontWeight: 600 }}>{mt.emoji} {mt.name}</td>
+                      <td style={css.td}>{status ? <StatusBadge status={status} /> : <span style={{ color: theme.mutedLight, fontSize: 12 }}>Sin datos</span>}</td>
+                      <td style={{ ...css.td, color: theme.muted }}>{m ? m.last_km.toLocaleString() : '—'}</td>
+                      <td style={{ ...css.td, color: theme.muted }}>{m?.last_date || '—'}</td>
+                      <td style={{ ...css.td, fontWeight: 600 }}>{m ? m.next_km.toLocaleString() : '—'}</td>
+                      <td style={{ ...css.td, color: theme.muted }}>{m?.next_date || '—'}</td>
+                      <td style={{ ...css.td, color: theme.muted }}>{m?.cost ? `${m.cost}€` : '—'}</td>
+                      <td style={css.td}>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button onClick={e => { e.stopPropagation(); setEditMaintType(mt.id) }} style={css.btnSm(theme.accentSoft, theme.accent)}><Edit2 size={12} /></button>
+                          {m && <button onClick={e => { e.stopPropagation(); handleDeleteMaint(mt.id) }} style={css.btnSm(theme.redSoft, theme.red)}><Trash2 size={12} /></button>}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Parts Tab */}
+      {activeTab === 'parts' && <PartsTab carId={car.id} parts={parts} onAdd={handleAddPart} onDelete={handleDeletePart} />}
+
+      {/* KM History Tab */}
+      {activeTab === 'km' && (
+        <div style={{ ...css.card, padding: 0, overflow: 'hidden' }}>
+          <div style={{ ...css.flexBetween, padding: '16px 20px', borderBottom: `1px solid ${theme.border}` }}>
+            <h3 style={css.h3}><TrendingUp size={16} style={{ marginRight: 6 }} />Historial de Kilómetros</h3>
+            <button onClick={() => setShowKmModal(true)} style={css.btnSm(theme.accent, '#000')}><Plus size={12} /> Registrar</button>
+          </div>
+          {kmLogs.length === 0 ? (
+            <p style={{ padding: 20, color: theme.muted, textAlign: 'center' }}>Sin registros aún</p>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: `1px solid ${theme.border}` }}>
+                  {['Fecha', 'Kilómetros', 'Notas'].map((h, i) => <th key={i} style={css.th}>{h}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {kmLogs.map(l => (
+                  <tr key={l.id} style={{ borderBottom: `1px solid ${theme.border}` }}>
+                    <td style={css.td}>{l.date}</td>
+                    <td style={{ ...css.td, fontWeight: 700 }}>{l.km.toLocaleString()} km</td>
+                    <td style={{ ...css.td, color: theme.muted }}>{l.notes || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
 
       {/* Modals */}
       <KmLogModal open={showKmModal} onClose={() => setShowKmModal(false)} onSave={handleSaveKm} carKm={car.current_km} />
       {editMaintType && (
-        <MaintModal
-          open={!!editMaintType}
-          onClose={() => setEditMaintType(null)}
-          typeId={editMaintType}
-          existing={(() => {
-            const m = maintenance.find(x => x.type_id === editMaintType)
-            return m ? { last_km: m.last_km, last_date: m.last_date, next_km: m.next_km, next_date: m.next_date, cost: m.cost, notes: m.notes } : null
-          })()}
-          currentKm={car.current_km}
-          onSave={data => handleSaveMaint(editMaintType, data)}
-        />
+        <MaintModal open={!!editMaintType} onClose={() => setEditMaintType(null)} typeId={editMaintType}
+          existing={(() => { const m = maintenance.find(x => x.type_id === editMaintType); return m ? { last_km: m.last_km, last_date: m.last_date, next_km: m.next_km, next_date: m.next_date, cost: m.cost, notes: m.notes } : null })()}
+          currentKm={car.current_km} onSave={data => handleSaveMaint(editMaintType, data)} />
       )}
       <CarEditModal open={showEditCar} onClose={() => setShowEditCar(false)} car={car} onSave={handleEditCar} />
     </div>

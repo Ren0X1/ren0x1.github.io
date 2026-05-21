@@ -6,7 +6,6 @@ export default function Nav({ user, view, setView, onLogout }) {
     { id: 'dashboard', icon: <Car size={16} />, label: 'Mis Coches' },
     ...(user.role === 'admin' ? [{ id: 'admin', icon: <Shield size={16} />, label: 'Admin' }] : []),
   ]
-
   return (
     <header style={{ background: theme.card, borderBottom: `1px solid ${theme.border}`, position: 'sticky', top: 0, zIndex: 100 }}>
       <div style={{ ...css.container, ...css.flexBetween, height: 56 }}>
@@ -16,26 +15,18 @@ export default function Nav({ user, view, setView, onLogout }) {
         </div>
         <div style={{ ...css.flex, gap: 4 }}>
           {tabs.map(t => (
-            <button
-              key={t.id}
-              onClick={() => setView(t.id)}
-              style={{
-                ...css.flex, gap: 5,
-                background: view === t.id ? theme.accentSoft : 'transparent',
-                color: view === t.id ? theme.accent : theme.muted,
-                border: 'none', borderRadius: 8, padding: '6px 14px',
-                cursor: 'pointer', fontWeight: 600, fontSize: 13, fontFamily: 'inherit',
-              }}
-            >
-              {t.icon} {t.label}
-            </button>
+            <button key={t.id} onClick={() => setView(t.id)} style={{
+              ...css.flex, gap: 5,
+              background: view === t.id ? theme.accentSoft : 'transparent',
+              color: view === t.id ? theme.accent : theme.muted,
+              border: 'none', borderRadius: 8, padding: '6px 14px',
+              cursor: 'pointer', fontWeight: 600, fontSize: 13, fontFamily: 'inherit',
+            }}>{t.icon} {t.label}</button>
           ))}
         </div>
         <div style={{ ...css.flex, gap: 12 }}>
           <span style={{ fontSize: 13, color: theme.muted }}>{user.name}</span>
-          <button onClick={onLogout} style={{ background: 'none', border: 'none', color: theme.muted, cursor: 'pointer', display: 'flex' }}>
-            <LogOut size={18} />
-          </button>
+          <button onClick={onLogout} style={{ background: 'none', border: 'none', color: theme.muted, cursor: 'pointer', display: 'flex' }}><LogOut size={18} /></button>
         </div>
       </div>
     </header>
