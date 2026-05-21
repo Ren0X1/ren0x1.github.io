@@ -1,5 +1,4 @@
 # 🔧 Pibes Mecánicos
-
 App de control de mantenimiento de vehículos para ti y tus amigos. Gratis, desplegada en GitHub Pages con Supabase como base de datos.
 
 ## 🚀 Setup paso a paso
