@@ -1,0 +1,8 @@
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  // Change 'pibes-mecanicos' to your GitHub repo name
+  base: '/pibes-mecanicos/',
+})

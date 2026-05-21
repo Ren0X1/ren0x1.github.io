@@ -1,97 +1,29 @@
 <!DOCTYPE html>
 <html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Los Colegones</title>
-	<link rel="icon" type="image/x-icon" href="./favicon.ico">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pibes Mecánicos</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>🔧</text></svg>" />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background: url('./Designer.jpeg') no-repeat center center/cover;
-        }
-        .container {
-            text-align: center;
-            background: rgba(0, 0, 0, 0.95);
-            padding: 20px;
-            border-radius: 1px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-        }
-
-		.container2 {
-			display: flex;
-			flex-direction: column;
-			flex-wrap: nowrap;
-			align-content: center;
-			justify-content: center;
-			align-items: center;
-        }
-
-        .container3 {
-            margin-top: 10px;
-			display: flex;
-			flex-direction: column;
-			flex-wrap: nowrap;
-			align-content: center;
-			justify-content: center;
-			align-items: center;
-        }
-
-        h1 {
-            color: #fff;
-            margin-bottom: 20px;
-            font-size: 3rem;
-        }
-        button {
-            background-color: #a72828;
-            color: #fff;
-            border: none;
-            padding: 15px 30px;
-            font-size: 1.2rem;
-            border-radius: 2px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-        button:hover {
-            background-color: #6d1b1b;
-        }
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+        background: #0b0b12;
+        color: #e2e8f0;
+        -webkit-font-smoothing: antialiased;
+      }
+      #root { min-height: 100vh; }
+      input, select, button { font-family: inherit; }
+      ::selection { background: rgba(245,158,11,0.3); }
+      ::-webkit-scrollbar { width: 6px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: #1e1e32; border-radius: 3px; }
     </style>
-</head>
-<body>
-    <div class="container">
-		<div class="container2">
-			<h1>Los Colegones</h1>
-			<img src="./colegone1024.png" width="350" alt="Logo del server">
-		</div>
-        <button onclick="jugar()">Copiar IP</button>
-		<button onclick="admin()">Admin panel</button>
-        <div class="container3">
-			<button onclick="mapa()">LosColegones Live Map</button>
-		</div>
-    </div>
-
-    <script>
-        function jugar() {
-            navigator.clipboard.writeText("play.loscolegones.com");
-        }
-
-		function admin() {
-			setTimeout(() => {
-                window.location.href = "https://play.loscolegones.com";
-            }, 1000);
-		}
-
-        function mapa() {
-			setTimeout(() => {
-                window.location.href = "http://play.loscolegones.com:8123/";
-            }, 1000);
-		}
-    </script>
-</body>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>
