@@ -1,11 +1,11 @@
 export const theme = {
-  bg: '#0b0b12', card: '#12121d', cardHover: '#181828', border: '#1e1e32',
+  bg: '#161616', card: '#1d1d1d', cardHover: '#2c2c2c', border: '#303030',
   accent: '#f59e0b', accentHover: '#d97706', accentSoft: 'rgba(245,158,11,0.12)',
-  text: '#e2e8f0', muted: '#7a7f9a', mutedLight: '#4a4f6a',
+  text: '#e2e8f0', muted: '#999999', mutedLight: '#6d6d6d',
   green: '#22c55e', greenSoft: 'rgba(34,197,94,0.12)',
   yellow: '#eab308', yellowSoft: 'rgba(234,179,8,0.12)',
   red: '#ef4444', redSoft: 'rgba(239,68,68,0.12)',
-  input: '#0f0f1a', white: '#ffffff',
+  input: '#141414', white: '#ffffff',
 }
 
 export const css = {

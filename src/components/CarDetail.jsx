@@ -299,7 +299,7 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
       <button onClick={onBack} style={{ ...css.btnOutline, marginBottom: 20 }}><ChevronLeft size={16} /> Volver</button>
 
       {/* Header */}
-      <div style={{ ...css.card, padding: 24, marginBottom: 20, background: `linear-gradient(135deg, ${theme.card} 0%, #1a1a2e 100%)` }}>
+      <div style={{ ...css.card, padding: 24, marginBottom: 20, background: `linear-gradient(135deg, ${theme.card} 0%, #2e2a1a 100%)` }}>
         <div style={css.flexBetween}>
           <div>
             <div style={{ ...css.flex, gap: 10, marginBottom: 6 }}>

@@ -42,7 +42,7 @@ export default function Login({ onLogin }) {
               style={css.input}
               value={username}
               onChange={e => { setUsername(e.target.value); setError('') }}
-              placeholder="tu usuario"
+              placeholder="Usuario"
               onKeyDown={e => e.key === 'Enter' && handleLogin()}
             />
           </Field>
@@ -82,9 +82,6 @@ export default function Login({ onLogin }) {
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
         </div>
-        <p style={{ ...css.subtitle, textAlign: 'center', marginTop: 16 }}>
-          Demo: admin / 1234
-        </p>
       </div>
     </div>
   )
