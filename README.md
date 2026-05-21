@@ -1,3 +1,4 @@
+[![Deploy to GitHub Pages](https://github.com/Ren0X1/ren0x1.github.io/actions/workflows/deploy.yml/badge.svg?branch=master)](https://github.com/Ren0X1/ren0x1.github.io/actions/workflows/deploy.yml)
 # 🔧 Pibes Mecánicos
 App de control de mantenimiento de vehículos para ti y tus amigos. Gratis, desplegada en GitHub Pages con Supabase como base de datos.
 
