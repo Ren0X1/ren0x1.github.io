@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
 import { Plus, Trash2, Save } from 'lucide-react'
 import { theme, css } from '../lib/theme.js'
+import { useIsMobile } from '../lib/useIsMobile.js'
 import { getProfiles, createProfile, deleteProfile, getCars } from '../lib/supabase.js'
 import { Modal, Field, Loader } from './ui.jsx'
 
 export default function AdminPanel({ onToast }) {
+  const mob = useIsMobile()
   const [users, setUsers] = useState([])
   const [carCounts, setCarCounts] = useState({})
   const [loading, setLoading] = useState(true)
@@ -48,21 +50,23 @@ export default function AdminPanel({ onToast }) {
 
   return (
     <div style={css.container}>
-      <div style={{ paddingTop: 28, paddingBottom: 40 }}>
-        <div style={{ ...css.flexBetween, marginBottom: 24 }}>
+      <div style={{ paddingTop: mob ? 20 : 28, paddingBottom: 40 }}>
+        <div style={{ ...css.flexBetween, marginBottom: 20, gap: 12 }}>
           <div>
-            <h1 style={css.h1}>Administración</h1>
-            <p style={css.subtitle}>Gestión de usuarios · {users.length} usuario{users.length !== 1 ? 's' : ''}</p>
+            <h1 style={{ ...css.h1, fontSize: mob ? 22 : 26 }}>Administración</h1>
+            <p style={css.subtitle}>{users.length} usuario{users.length !== 1 ? 's' : ''}</p>
           </div>
-          <button onClick={() => setShowNew(true)} style={css.btn()}><Plus size={16} /> Nuevo Usuario</button>
+          <button onClick={() => setShowNew(true)} style={css.btn()}>
+            <Plus size={16} /> {mob ? 'Nuevo' : 'Nuevo Usuario'}
+          </button>
         </div>
 
-        <div style={{ display: 'grid', gap: 12 }}>
+        <div style={{ display: 'grid', gap: 10 }}>
           {users.map(u => (
-            <div key={u.id} style={css.card}>
-              <div style={css.flexBetween}>
-                <div>
-                  <div style={{ ...css.flex, gap: 10, marginBottom: 4 }}>
+            <div key={u.id} style={{ ...css.card, padding: mob ? 14 : 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
                     <h3 style={css.h3}>{u.name}</h3>
                     <span style={css.badge(
                       u.role === 'admin' ? theme.accentSoft : theme.greenSoft,
@@ -74,7 +78,9 @@ export default function AdminPanel({ onToast }) {
                   </p>
                 </div>
                 {u.role !== 'admin' && (
-                  <button onClick={() => handleDelete(u.id, u.name)} style={css.btnSm(theme.redSoft, theme.red)}><Trash2 size={12} /> Eliminar</button>
+                  <button onClick={() => handleDelete(u.id, u.name)} style={css.btnSm(theme.redSoft, theme.red)}>
+                    <Trash2 size={12} /> {mob ? '' : 'Eliminar'}
+                  </button>
                 )}
               </div>
             </div>

@@ -4,9 +4,10 @@ import {
   Gauge, Calendar, Settings, Fuel, Save, Package
 } from 'lucide-react'
 import { theme, css } from '../lib/theme.js'
+import { useIsMobile } from '../lib/useIsMobile.js'
 import { getCars, createCar, deleteCar, getMaintenanceRecords, getCarParts } from '../lib/supabase.js'
 import { FUEL_TYPES, TRANS_TYPES, getMaintStatus } from '../lib/constants.js'
-import { Modal, Field, Loader } from './ui.jsx'
+import { Modal, Field, Loader, ResponsiveGrid2 } from './ui.jsx'
 import CarDetail from './CarDetail.jsx'
 
 function CarFormModal({ open, onClose, onSave }) {
@@ -23,7 +24,7 @@ function CarFormModal({ open, onClose, onSave }) {
   }
   return (
     <Modal open={open} onClose={onClose} title="Nuevo Coche">
-      <div style={css.grid2}>
+      <ResponsiveGrid2>
         <Field label="Matrícula"><input style={css.input} value={form.plate} onChange={e => set('plate', e.target.value)} placeholder="1234 ABC" /></Field>
         <Field label="Marca"><input style={css.input} value={form.brand} onChange={e => set('brand', e.target.value)} placeholder="BMW" /></Field>
         <Field label="Modelo"><input style={css.input} value={form.model} onChange={e => set('model', e.target.value)} placeholder="320d" /></Field>
@@ -39,7 +40,7 @@ function CarFormModal({ open, onClose, onSave }) {
           </select>
         </Field>
         <Field label="Km actuales"><input style={css.input} type="number" value={form.current_km} onChange={e => set('current_km', +e.target.value)} /></Field>
-      </div>
+      </ResponsiveGrid2>
       <Field label="Notas"><input style={css.input} value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Opcional" /></Field>
       <div style={{ ...css.flex, justifyContent: 'flex-end', marginTop: 8, gap: 8 }}>
         <button onClick={onClose} style={css.btnOutline}>Cancelar</button>
@@ -52,6 +53,7 @@ function CarFormModal({ open, onClose, onSave }) {
 }
 
 export default function Dashboard({ user, onToast }) {
+  const mob = useIsMobile()
   const [cars, setCars] = useState([])
   const [carMeta, setCarMeta] = useState({})
   const [loading, setLoading] = useState(true)
@@ -101,61 +103,62 @@ export default function Dashboard({ user, onToast }) {
 
   return (
     <div style={css.container}>
-      <div style={{ paddingTop: 28, paddingBottom: 40 }}>
-        <div style={{ ...css.flexBetween, marginBottom: 24 }}>
+      <div style={{ paddingTop: mob ? 20 : 28, paddingBottom: 40 }}>
+        <div style={{ ...css.flexBetween, marginBottom: 20, gap: 12 }}>
           <div>
-            <h1 style={css.h1}>Mis Coches</h1>
-            <p style={css.subtitle}>{cars.length} vehículo{cars.length !== 1 ? 's' : ''} registrado{cars.length !== 1 ? 's' : ''}</p>
+            <h1 style={{ ...css.h1, fontSize: mob ? 22 : 26 }}>Mis Coches</h1>
+            <p style={css.subtitle}>{cars.length} vehículo{cars.length !== 1 ? 's' : ''}</p>
           </div>
-          <button onClick={() => setShowNewCar(true)} style={css.btn()}><Plus size={16} /> Añadir Coche</button>
+          <button onClick={() => setShowNewCar(true)} style={css.btn()}>
+            <Plus size={16} /> {mob ? 'Añadir' : 'Añadir Coche'}
+          </button>
         </div>
 
         {cars.length === 0 ? (
-          <div style={{ ...css.card, padding: 48, textAlign: 'center' }}>
-            <Car size={48} color={theme.mutedLight} style={{ marginBottom: 12 }} />
-            <p style={{ color: theme.muted }}>Aún no tienes coches registrados</p>
+          <div style={{ ...css.card, padding: 40, textAlign: 'center' }}>
+            <Car size={40} color={theme.mutedLight} style={{ marginBottom: 12 }} />
+            <p style={{ color: theme.muted, fontSize: 13 }}>Aún no tienes coches registrados</p>
             <button onClick={() => setShowNewCar(true)} style={{ ...css.btn(), marginTop: 12 }}><Plus size={14} /> Añadir tu primer coche</button>
           </div>
         ) : (
           <div style={{ display: 'grid', gap: 12 }}>
             {cars.map(car => {
-              const m = carMeta[car.id] || { maint: [], partsCount: 0 }
+              const mt = carMeta[car.id] || { maint: [], partsCount: 0 }
               let overdue = 0, warn = 0
-              m.maint.forEach(r => { const s = getMaintStatus(r, car.current_km); if (s === 'overdue') overdue++; if (s === 'warn') warn++ })
+              mt.maint.forEach(r => { const s = getMaintStatus(r, car.current_km); if (s === 'overdue') overdue++; if (s === 'warn') warn++ })
               return (
                 <div key={car.id} onClick={() => setSelectedCarId(car.id)}
                   style={{ ...css.card, padding: 0, cursor: 'pointer', transition: 'all .15s', overflow: 'hidden' }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = theme.accent; e.currentTarget.style.background = theme.cardHover }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = theme.border; e.currentTarget.style.background = theme.card }}>
-                  <div style={{ padding: 20 }}>
-                    <div style={css.flexBetween}>
-                      <div>
-                        <div style={{ ...css.flex, gap: 10, marginBottom: 4 }}>
-                          <h3 style={{ ...css.h2, fontSize: 18 }}>{car.brand} {car.model}</h3>
-                          <span style={css.badge(theme.accentSoft, theme.accent)}>{car.plate}</span>
-                        </div>
-                        <div style={{ ...css.flex, gap: 16, marginTop: 8, flexWrap: 'wrap' }}>
-                          <span style={{ ...css.flex, gap: 4, color: theme.muted, fontSize: 13 }}><Gauge size={14} /> {car.current_km.toLocaleString()} km</span>
-                          <span style={{ ...css.flex, gap: 4, color: theme.muted, fontSize: 13 }}><Calendar size={14} /> {car.year}</span>
-                          <span style={{ ...css.flex, gap: 4, color: theme.muted, fontSize: 13 }}><Settings size={14} /> {car.transmission}</span>
-                          <span style={{ ...css.flex, gap: 4, color: theme.muted, fontSize: 13 }}><Fuel size={14} /> {car.fuel}</span>
-                          {m.partsCount > 0 && <span style={{ ...css.flex, gap: 4, color: theme.muted, fontSize: 13 }}><Package size={14} /> {m.partsCount} recambio{m.partsCount !== 1 ? 's' : ''}</span>}
-                        </div>
-                      </div>
-                      <div style={{ ...css.flex, gap: 8 }}>
+                  <div style={{ padding: mob ? 14 : 20 }}>
+                    {/* Title + plate */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+                      <h3 style={{ ...css.h2, fontSize: mob ? 16 : 18 }}>{car.brand} {car.model}</h3>
+                      <span style={css.badge(theme.accentSoft, theme.accent)}>{car.plate}</span>
+                      {/* Badges and delete on same row for mobile */}
+                      <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
                         {overdue > 0 && <span style={css.badge(theme.redSoft, theme.red)}><AlertTriangle size={11} /> {overdue}</span>}
                         {warn > 0 && <span style={css.badge(theme.yellowSoft, theme.yellow)}><Clock size={11} /> {warn}</span>}
-                        {overdue === 0 && warn === 0 && m.maint.length > 0 && <span style={css.badge(theme.greenSoft, theme.green)}><CheckCircle size={11} /> Todo OK</span>}
+                        {overdue === 0 && warn === 0 && mt.maint.length > 0 && <span style={css.badge(theme.greenSoft, theme.green)}><CheckCircle size={11} /> OK</span>}
                         <button onClick={e => { e.stopPropagation(); handleDeleteCar(car.id) }} style={css.btnSm(theme.redSoft, theme.red)}><Trash2 size={12} /></button>
                       </div>
                     </div>
+                    {/* Info row */}
+                    <div style={{ display: 'flex', gap: mob ? 10 : 16, marginTop: 8, flexWrap: 'wrap', fontSize: mob ? 12 : 13 }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: theme.muted }}><Gauge size={13} /> {car.current_km.toLocaleString()} km</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: theme.muted }}><Calendar size={13} /> {car.year}</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: theme.muted }}><Settings size={13} /> {car.transmission}</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: theme.muted }}><Fuel size={13} /> {car.fuel}</span>
+                      {mt.partsCount > 0 && <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: theme.muted }}><Package size={13} /> {mt.partsCount}</span>}
+                    </div>
                   </div>
-                  {m.maint.length > 0 && (
+                  {mt.maint.length > 0 && (
                     <div style={{ height: 3, background: theme.border, display: 'flex' }}>
                       {(() => {
-                        const total = m.maint.length
-                        const okC = m.maint.filter(r => getMaintStatus(r, car.current_km) === 'ok').length
-                        const warnC = m.maint.filter(r => getMaintStatus(r, car.current_km) === 'warn').length
+                        const total = mt.maint.length
+                        const okC = mt.maint.filter(r => getMaintStatus(r, car.current_km) === 'ok').length
+                        const warnC = mt.maint.filter(r => getMaintStatus(r, car.current_km) === 'warn').length
                         return (<>
                           <div style={{ width: `${(okC / total) * 100}%`, background: theme.green }} />
                           <div style={{ width: `${(warnC / total) * 100}%`, background: theme.yellow }} />

@@ -9,17 +9,26 @@ export function StatusBadge({ status }) {
 
 export function Modal({ open, onClose, title, children }) {
   if (!open) return null
+  const isMobile = window.innerWidth < 640
   return (
     <div style={css.overlay} onClick={onClose}>
-      <div style={css.modal} onClick={e => e.stopPropagation()}>
-        <div style={{ ...css.flexBetween, marginBottom: 20 }}>
-          <h3 style={css.h2}>{title}</h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: theme.muted, cursor: 'pointer' }}><X size={20} /></button>
+      <div style={{
+        ...css.modal,
+        ...(isMobile ? { maxWidth: '100%', maxHeight: '95vh', borderRadius: 12, margin: 8, padding: 16 } : {}),
+      }} onClick={e => e.stopPropagation()}>
+        <div style={{ ...css.flexBetween, marginBottom: 16 }}>
+          <h3 style={{ ...css.h2, fontSize: isMobile ? 17 : 20 }}>{title}</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: theme.muted, cursor: 'pointer', padding: 4 }}><X size={20} /></button>
         </div>
         {children}
       </div>
     </div>
   )
+}
+
+export function ResponsiveGrid2({ children }) {
+  const isMobile = window.innerWidth < 640
+  return <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12 }}>{children}</div>
 }
 
 export function Field({ label, children }) {
@@ -28,11 +37,11 @@ export function Field({ label, children }) {
 
 export function Stat({ icon, label, value, color }) {
   return (
-    <div style={{ ...css.card, padding: 16, display: 'flex', alignItems: 'center', gap: 12, marginBottom: 0 }}>
-      <div style={{ background: theme.accentSoft, borderRadius: 10, padding: 10, display: 'flex' }}>{icon}</div>
+    <div style={{ ...css.card, padding: 12, display: 'flex', alignItems: 'center', gap: 10, marginBottom: 0 }}>
+      <div style={{ background: theme.accentSoft, borderRadius: 10, padding: 8, display: 'flex' }}>{icon}</div>
       <div>
-        <div style={{ fontSize: 11, color: theme.muted, textTransform: 'uppercase', fontWeight: 600 }}>{label}</div>
-        <div style={{ fontSize: 20, fontWeight: 800, color: color || theme.white }}>{value}</div>
+        <div style={{ fontSize: 10, color: theme.muted, textTransform: 'uppercase', fontWeight: 600 }}>{label}</div>
+        <div style={{ fontSize: 18, fontWeight: 800, color: color || theme.white }}>{value}</div>
       </div>
     </div>
   )
@@ -53,9 +62,16 @@ export function Loader({ text = 'Cargando...' }) {
 export function Toast({ message, type = 'success', onClose }) {
   if (!message) return null
   const color = type === 'error' ? theme.red : theme.green
+  const isMobile = window.innerWidth < 640
   return (
-    <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 2000, background: theme.card, border: `1px solid ${color}`, borderRadius: 10, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 4px 24px rgba(0,0,0,0.5)' }}>
-      <span style={{ fontSize: 13, color }}>{message}</span>
+    <div style={{
+      position: 'fixed', bottom: isMobile ? 16 : 24, zIndex: 2000,
+      ...(isMobile ? { left: 16, right: 16 } : { right: 24 }),
+      background: theme.card, border: `1px solid ${color}`,
+      borderRadius: 10, padding: '12px 16px', display: 'flex',
+      alignItems: 'center', gap: 10, boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
+    }}>
+      <span style={{ fontSize: 13, color, flex: 1 }}>{message}</span>
       <button onClick={onClose} style={{ background: 'none', border: 'none', color: theme.muted, cursor: 'pointer' }}><X size={14} /></button>
     </div>
   )

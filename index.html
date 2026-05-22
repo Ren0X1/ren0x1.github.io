@@ -2,19 +2,33 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#161616" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Pibes Mecánicos</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>🔧</text></svg>" />
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <style>
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-      body { font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif; background: #0b0b12; color: #e2e8f0; -webkit-font-smoothing: antialiased; }
-      #root { min-height: 100vh; }
+      body {
+        font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+        background: #161616;
+        color: #e2e8f0;
+        -webkit-font-smoothing: antialiased;
+        -webkit-tap-highlight-color: transparent;
+        overscroll-behavior: none;
+      }
+      #root { min-height: 100vh; min-height: 100dvh; }
       input, select, button { font-family: inherit; }
+      /* Prevent iOS zoom on input focus */
+      @media (max-width: 639px) {
+        input, select, textarea { font-size: 16px !important; }
+      }
       ::selection { background: rgba(245,158,11,0.3); }
       ::-webkit-scrollbar { width: 6px; }
       ::-webkit-scrollbar-track { background: transparent; }
-      ::-webkit-scrollbar-thumb { background: #1e1e32; border-radius: 3px; }
+      ::-webkit-scrollbar-thumb { background: #303030; border-radius: 3px; }
     </style>
   </head>
   <body>

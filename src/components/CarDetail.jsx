@@ -5,32 +5,65 @@ import {
   Clock, Plus, Package, ExternalLink
 } from 'lucide-react'
 import { theme, css } from '../lib/theme.js'
+import { useIsMobile } from '../lib/useIsMobile.js'
 import {
   updateCar, getMaintenanceRecords, upsertMaintenanceRecord,
   deleteMaintenanceRecord, getKmLogs, createKmLog,
   getCarParts, createCarPart, deleteCarPart
 } from '../lib/supabase.js'
 import { MAINT_TYPES, FUEL_TYPES, TRANS_TYPES, getMaintStatus } from '../lib/constants.js'
-import { Modal, Field, Stat, StatusBadge, Loader } from './ui.jsx'
+import { Modal, Field, Stat, StatusBadge, Loader, ResponsiveGrid2 } from './ui.jsx'
 
 const today = new Date().toISOString().split('T')[0]
 
 /* ── Tab Bar ── */
-function TabBar({ tabs, active, onChange }) {
+function TabBar({ tabs, active, onChange, isMobile }) {
   return (
-    <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: theme.bg, borderRadius: 10, padding: 4 }}>
+    <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: theme.bg, borderRadius: 10, padding: 4 }}>
       {tabs.map(t => (
         <button key={t.id} onClick={() => onChange(t.id)} style={{
-          display: 'flex', alignItems: 'center', gap: 6, flex: 1, justifyContent: 'center',
+          display: 'flex', alignItems: 'center', gap: isMobile ? 4 : 6, flex: 1, justifyContent: 'center',
           background: active === t.id ? theme.card : 'transparent',
           color: active === t.id ? theme.white : theme.muted,
           border: active === t.id ? `1px solid ${theme.border}` : '1px solid transparent',
-          borderRadius: 8, padding: '9px 16px', cursor: 'pointer', fontWeight: 600,
-          fontSize: 13, fontFamily: 'inherit', transition: 'all .15s',
+          borderRadius: 8, padding: isMobile ? '8px 6px' : '9px 16px', cursor: 'pointer', fontWeight: 600,
+          fontSize: isMobile ? 11 : 13, fontFamily: 'inherit', transition: 'all .15s',
         }}>
           {t.icon} {t.label}
         </button>
       ))}
+    </div>
+  )
+}
+
+/* ── Mobile Maintenance Card ── */
+function MaintCard({ mt, record, currentKm, onEdit, onDelete }) {
+  const status = record ? getMaintStatus(record, currentKm) : null
+  return (
+    <div onClick={onEdit}
+      style={{ ...css.card, padding: 14, marginBottom: 8, cursor: 'pointer' }}
+      onTouchEnd={e => { /* prevent ghost click */ }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 16 }}>{mt.emoji}</span>
+          <span style={{ fontWeight: 600, fontSize: 13 }}>{mt.name}</span>
+        </div>
+        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+          {status ? <StatusBadge status={status} /> : <span style={{ color: theme.mutedLight, fontSize: 11 }}>Sin datos</span>}
+        </div>
+      </div>
+      {record && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, fontSize: 12, color: theme.muted }}>
+          <span>Último: {record.last_km?.toLocaleString()} km</span>
+          <span>Fecha: {record.last_date || '—'}</span>
+          <span style={{ fontWeight: 600, color: theme.text }}>Próximo: {record.next_km?.toLocaleString()} km</span>
+          <span>Fecha: {record.next_date || '—'}</span>
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 4, marginTop: 8, justifyContent: 'flex-end' }}>
+        <button onClick={e => { e.stopPropagation(); onEdit() }} style={css.btnSm(theme.accentSoft, theme.accent)}><Edit2 size={12} /></button>
+        {record && <button onClick={e => { e.stopPropagation(); onDelete() }} style={css.btnSm(theme.redSoft, theme.red)}><Trash2 size={12} /></button>}
+      </div>
     </div>
   )
 }
@@ -76,16 +109,16 @@ function MaintModal({ open, onClose, onSave, typeId, existing, currentKm }) {
       <p style={{ ...css.subtitle, marginBottom: 16 }}>
         Intervalo: {mtype?.defKm ? `${mtype.defKm.toLocaleString()} km` : '—'}{mtype?.defMonths ? ` / ${mtype.defMonths} meses` : ''}
       </p>
-      <div style={css.grid2}>
+      <ResponsiveGrid2>
         <Field label="Último cambio (km)"><input style={css.input} type="number" value={form.last_km} onChange={e => autoCalcNext(+e.target.value, form.last_date)} /></Field>
         <Field label="Fecha último cambio"><input style={css.input} type="date" value={form.last_date} onChange={e => autoCalcNext(form.last_km, e.target.value)} /></Field>
         <Field label="Próximo cambio (km)"><input style={css.input} type="number" value={form.next_km} onChange={e => set('next_km', +e.target.value)} /></Field>
         <Field label="Fecha próximo cambio"><input style={css.input} type="date" value={form.next_date} onChange={e => set('next_date', e.target.value)} /></Field>
-      </div>
-      <div style={css.grid2}>
+      </ResponsiveGrid2>
+      <ResponsiveGrid2>
         <Field label="Coste (€)"><input style={css.input} type="number" value={form.cost} onChange={e => set('cost', +e.target.value)} /></Field>
         <Field label="Notas"><input style={css.input} value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Marca, taller..." /></Field>
-      </div>
+      </ResponsiveGrid2>
       <div style={{ ...css.flex, justifyContent: 'flex-end', marginTop: 8, gap: 8 }}>
         <button onClick={onClose} style={css.btnOutline}>Cancelar</button>
         <button onClick={handleSave} disabled={saving} style={css.btn()}><Save size={14} /> {saving ? 'Guardando...' : 'Guardar'}</button>
@@ -101,7 +134,7 @@ function CarEditModal({ open, onClose, onSave, car }) {
   const handleSave = async () => { setSaving(true); try { await onSave(form) } finally { setSaving(false) } }
   return (
     <Modal open={open} onClose={onClose} title="Editar Coche">
-      <div style={css.grid2}>
+      <ResponsiveGrid2>
         <Field label="Matrícula"><input style={css.input} value={form.plate} onChange={e => set('plate', e.target.value)} /></Field>
         <Field label="Marca"><input style={css.input} value={form.brand} onChange={e => set('brand', e.target.value)} /></Field>
         <Field label="Modelo"><input style={css.input} value={form.model} onChange={e => set('model', e.target.value)} /></Field>
@@ -116,7 +149,7 @@ function CarEditModal({ open, onClose, onSave, car }) {
             {FUEL_TYPES.map(t => <option key={t}>{t}</option>)}
           </select>
         </Field>
-      </div>
+      </ResponsiveGrid2>
       <Field label="Notas"><input style={css.input} value={form.notes || ''} onChange={e => set('notes', e.target.value)} /></Field>
       <div style={{ ...css.flex, justifyContent: 'flex-end', marginTop: 8, gap: 8 }}>
         <button onClick={onClose} style={css.btnOutline}>Cancelar</button>
@@ -149,32 +182,44 @@ function PartFormModal({ open, onClose, onSave }) {
 }
 
 /* ── Parts Tab ── */
-function PartsTab({ carId, parts, onAdd, onDelete }) {
+function PartsTab({ carId, parts, onAdd, onDelete, isMobile }) {
   const [showAdd, setShowAdd] = useState(false)
-  const blue = '#3b82f6'
-  const blueSoft = 'rgba(59,130,246,0.12)'
-
+  const blue = '#3b82f6', blueSoft = 'rgba(59,130,246,0.12)'
   return (
     <>
       <div style={{ ...css.card, padding: 0, overflow: 'hidden' }}>
-        <div style={{ ...css.flexBetween, padding: '16px 20px', borderBottom: `1px solid ${theme.border}` }}>
+        <div style={{ ...css.flexBetween, padding: isMobile ? '12px 14px' : '16px 20px', borderBottom: `1px solid ${theme.border}` }}>
           <h3 style={css.h3}><Package size={16} style={{ marginRight: 6 }} />Recambios</h3>
           <button onClick={() => setShowAdd(true)} style={css.btnSm(theme.accent, '#000')}><Plus size={12} /> Añadir</button>
         </div>
         {parts.length === 0 ? (
-          <div style={{ padding: 40, textAlign: 'center' }}>
-            <Package size={36} color={theme.mutedLight} style={{ marginBottom: 8 }} />
-            <p style={{ color: theme.muted, fontSize: 13 }}>Sin recambios registrados</p>
+          <div style={{ padding: 32, textAlign: 'center' }}>
+            <Package size={32} color={theme.mutedLight} style={{ marginBottom: 8 }} />
+            <p style={{ color: theme.muted, fontSize: 13 }}>Sin recambios</p>
             <button onClick={() => setShowAdd(true)} style={{ ...css.btn(), marginTop: 12 }}><Plus size={14} /> Añadir recambio</button>
           </div>
+        ) : isMobile ? (
+          /* Mobile: card list */
+          <div style={{ padding: 10 }}>
+            {parts.map(p => (
+              <div key={p.id} style={{ padding: '10px 4px', borderBottom: `1px solid ${theme.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 13 }}>{p.name}</div>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+                    {p.reference && <span style={css.badge(blueSoft, blue)}>{p.reference}</span>}
+                    {p.url && <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ color: blue, fontSize: 12, display: 'flex', alignItems: 'center', gap: 3 }}><ExternalLink size={11} /> Link</a>}
+                  </div>
+                </div>
+                <button onClick={() => onDelete(p.id)} style={css.btnSm(theme.redSoft, theme.red)}><Trash2 size={12} /></button>
+              </div>
+            ))}
+          </div>
         ) : (
+          /* Desktop: table */
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${theme.border}` }}>
-                <th style={css.th}>Nombre</th>
-                <th style={css.th}>Referencia</th>
-                <th style={css.th}>Enlace</th>
-                <th style={{ ...css.th, width: 60 }}></th>
+                <th style={css.th}>Nombre</th><th style={css.th}>Referencia</th><th style={css.th}>Enlace</th><th style={{ ...css.th, width: 60 }}></th>
               </tr>
             </thead>
             <tbody>
@@ -183,20 +228,9 @@ function PartsTab({ carId, parts, onAdd, onDelete }) {
                   onMouseEnter={e => e.currentTarget.style.background = theme.cardHover}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                   <td style={{ ...css.td, fontWeight: 600 }}>{p.name}</td>
-                  <td style={css.td}>
-                    {p.reference ? <span style={css.badge(blueSoft, blue)}>{p.reference}</span> : <span style={{ color: theme.mutedLight, fontSize: 12 }}>—</span>}
-                  </td>
-                  <td style={css.td}>
-                    {p.url ? (
-                      <a href={p.url} target="_blank" rel="noopener noreferrer"
-                        style={{ color: blue, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-                        <ExternalLink size={12} /> Ver enlace
-                      </a>
-                    ) : <span style={{ color: theme.mutedLight, fontSize: 12 }}>—</span>}
-                  </td>
-                  <td style={css.td}>
-                    <button onClick={() => onDelete(p.id)} style={css.btnSm(theme.redSoft, theme.red)}><Trash2 size={12} /></button>
-                  </td>
+                  <td style={css.td}>{p.reference ? <span style={css.badge(blueSoft, blue)}>{p.reference}</span> : <span style={{ color: theme.mutedLight, fontSize: 12 }}>—</span>}</td>
+                  <td style={css.td}>{p.url ? <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ color: blue, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}><ExternalLink size={12} /> Ver enlace</a> : <span style={{ color: theme.mutedLight, fontSize: 12 }}>—</span>}</td>
+                  <td style={css.td}><button onClick={() => onDelete(p.id)} style={css.btnSm(theme.redSoft, theme.red)}><Trash2 size={12} /></button></td>
                 </tr>
               ))}
             </tbody>
@@ -210,6 +244,7 @@ function PartsTab({ carId, parts, onAdd, onDelete }) {
 
 /* ── Main CarDetail ── */
 export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToast }) {
+  const mob = useIsMobile()
   const [car, setCar] = useState(initialCar)
   const [maintenance, setMaintenance] = useState([])
   const [kmLogs, setKmLogs] = useState([])
@@ -222,19 +257,10 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
 
   const loadData = async () => {
     try {
-      const [maint, logs, carParts] = await Promise.all([
-        getMaintenanceRecords(car.id),
-        getKmLogs(car.id),
-        getCarParts(car.id),
-      ])
-      setMaintenance(maint)
-      setKmLogs(logs)
-      setParts(carParts)
-    } catch (err) {
-      onToast('Error cargando datos: ' + err.message, 'error')
-    } finally {
-      setLoading(false)
-    }
+      const [maint, logs, carParts] = await Promise.all([getMaintenanceRecords(car.id), getKmLogs(car.id), getCarParts(car.id)])
+      setMaintenance(maint); setKmLogs(logs); setParts(carParts)
+    } catch (err) { onToast('Error cargando datos: ' + err.message, 'error') }
+    finally { setLoading(false) }
   }
 
   useEffect(() => { loadData() }, [car.id])
@@ -249,36 +275,25 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
     try {
       await createKmLog({ car_id: car.id, km: data.km, date: data.date, notes: data.notes })
       if (data.km > car.current_km) { const updated = await updateCar(car.id, { current_km: data.km }); setCar(updated) }
-      setShowKmModal(false)
-      onToast('Kilómetros registrados')
-      loadData()
+      setShowKmModal(false); onToast('Kilómetros registrados'); loadData()
     } catch (err) { onToast('Error: ' + err.message, 'error') }
   }
-
   const handleSaveMaint = async (typeId, formData) => {
-    try {
-      await upsertMaintenanceRecord({ car_id: car.id, type_id: typeId, ...formData })
-      setEditMaintType(null)
-      onToast('Mantenimiento actualizado')
-      loadData()
-    } catch (err) { onToast('Error: ' + err.message, 'error') }
+    try { await upsertMaintenanceRecord({ car_id: car.id, type_id: typeId, ...formData }); setEditMaintType(null); onToast('Mantenimiento actualizado'); loadData() }
+    catch (err) { onToast('Error: ' + err.message, 'error') }
   }
-
   const handleDeleteMaint = async (typeId) => {
     try { await deleteMaintenanceRecord(car.id, typeId); onToast('Registro eliminado'); loadData() }
     catch (err) { onToast('Error: ' + err.message, 'error') }
   }
-
   const handleAddPart = async (form) => {
     try { await createCarPart({ car_id: car.id, ...form }); onToast('Recambio añadido'); loadData() }
     catch (err) { onToast('Error: ' + err.message, 'error') }
   }
-
   const handleDeletePart = async (id) => {
     try { await deleteCarPart(id); onToast('Recambio eliminado'); loadData() }
     catch (err) { onToast('Error: ' + err.message, 'error') }
   }
-
   const handleEditCar = async (form) => {
     try {
       const updated = await updateCar(car.id, { plate: form.plate, brand: form.brand, model: form.model, year: form.year, transmission: form.transmission, fuel: form.fuel, notes: form.notes })
@@ -289,120 +304,136 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
   if (loading) return <Loader text="Cargando datos del coche..." />
 
   const detailTabs = [
-    { id: 'maint', icon: <Wrench size={15} />, label: 'Mantenimientos' },
-    { id: 'parts', icon: <Package size={15} />, label: 'Recambios' },
-    { id: 'km', icon: <TrendingUp size={15} />, label: 'Kilómetros' },
+    { id: 'maint', icon: <Wrench size={14} />, label: mob ? 'Mant.' : 'Mantenimientos' },
+    { id: 'parts', icon: <Package size={14} />, label: 'Recambios' },
+    { id: 'km', icon: <TrendingUp size={14} />, label: mob ? 'Km' : 'Kilómetros' },
   ]
 
   return (
-    <div style={{ paddingTop: 24, paddingBottom: 40 }}>
-      <button onClick={onBack} style={{ ...css.btnOutline, marginBottom: 20 }}><ChevronLeft size={16} /> Volver</button>
+    <div style={{ paddingTop: mob ? 16 : 24, paddingBottom: 40 }}>
+      <button onClick={onBack} style={{ ...css.btnOutline, marginBottom: 16, padding: mob ? '6px 12px' : '8px 16px' }}><ChevronLeft size={16} /> Volver</button>
 
       {/* Header */}
-      <div style={{ ...css.card, padding: 24, marginBottom: 20, background: `linear-gradient(135deg, ${theme.card} 0%, #2e2a1a 100%)` }}>
-        <div style={css.flexBetween}>
+      <div style={{ ...css.card, padding: mob ? 16 : 24, marginBottom: 16, background: `linear-gradient(135deg, ${theme.card} 0%, #2e2a1a 100%)` }}>
+        <div style={{ display: 'flex', flexDirection: mob ? 'column' : 'row', justifyContent: 'space-between', gap: mob ? 12 : 0 }}>
           <div>
-            <div style={{ ...css.flex, gap: 10, marginBottom: 6 }}>
-              <h2 style={{ ...css.h1, fontSize: 28 }}>{car.brand} {car.model}</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+              <h2 style={{ ...css.h1, fontSize: mob ? 22 : 28 }}>{car.brand} {car.model}</h2>
               <span style={css.badge(theme.accentSoft, theme.accent)}>{car.plate}</span>
             </div>
-            <div style={{ ...css.flex, gap: 16, marginTop: 8 }}>
-              <span style={{ ...css.flex, gap: 4, color: theme.muted, fontSize: 13 }}><Calendar size={14} /> {car.year}</span>
-              <span style={{ ...css.flex, gap: 4, color: theme.muted, fontSize: 13 }}><Settings size={14} /> {car.transmission}</span>
-              <span style={{ ...css.flex, gap: 4, color: theme.muted, fontSize: 13 }}><Fuel size={14} /> {car.fuel}</span>
+            <div style={{ display: 'flex', gap: mob ? 10 : 16, marginTop: 6, flexWrap: 'wrap', fontSize: mob ? 12 : 13 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: theme.muted }}><Calendar size={13} /> {car.year}</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: theme.muted }}><Settings size={13} /> {car.transmission}</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: theme.muted }}><Fuel size={13} /> {car.fuel}</span>
             </div>
           </div>
-          <div style={{ ...css.flex, gap: 8 }}>
-            <button onClick={() => setShowKmModal(true)} style={css.btn()}><TrendingUp size={14} /> Registrar km</button>
+          <div style={{ display: 'flex', gap: 8, alignSelf: mob ? 'stretch' : 'flex-start' }}>
+            <button onClick={() => setShowKmModal(true)} style={{ ...css.btn(), flex: mob ? 1 : 'none', justifyContent: 'center' }}>
+              <TrendingUp size={14} /> {mob ? 'Km' : 'Registrar km'}
+            </button>
             <button onClick={() => setShowEditCar(true)} style={css.btnOutline}><Edit2 size={14} /></button>
           </div>
         </div>
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
-        <Stat icon={<Gauge size={20} color={theme.accent} />} label="Kilómetros" value={car.current_km.toLocaleString()} />
-        <Stat icon={<CheckCircle size={20} color={theme.green} />} label="Al día" value={stats.ok} color={theme.green} />
-        <Stat icon={<Clock size={20} color={theme.yellow} />} label="Próximos" value={stats.warn} color={theme.yellow} />
-        <Stat icon={<AlertTriangle size={20} color={theme.red} />} label="Vencidos" value={stats.overdue} color={theme.red} />
+      <div style={{ display: 'grid', gridTemplateColumns: mob ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: mob ? 8 : 12, marginBottom: mob ? 16 : 24 }}>
+        <Stat icon={<Gauge size={18} color={theme.accent} />} label="Kilómetros" value={car.current_km.toLocaleString()} />
+        <Stat icon={<CheckCircle size={18} color={theme.green} />} label="Al día" value={stats.ok} color={theme.green} />
+        <Stat icon={<Clock size={18} color={theme.yellow} />} label="Próximos" value={stats.warn} color={theme.yellow} />
+        <Stat icon={<AlertTriangle size={18} color={theme.red} />} label="Vencidos" value={stats.overdue} color={theme.red} />
       </div>
 
       {/* Tabs */}
-      <TabBar tabs={detailTabs} active={activeTab} onChange={setActiveTab} />
+      <TabBar tabs={detailTabs} active={activeTab} onChange={setActiveTab} isMobile={mob} />
 
       {/* Maintenance Tab */}
       {activeTab === 'maint' && (
-        <div style={{ ...css.card, padding: 0, overflow: 'hidden' }}>
-          <div style={{ padding: '16px 20px', borderBottom: `1px solid ${theme.border}` }}>
-            <h3 style={css.h3}><Wrench size={16} style={{ marginRight: 6 }} />Mantenimientos</h3>
+        mob ? (
+          /* Mobile: card list */
+          <div>
+            {MAINT_TYPES.map(mt => {
+              const m = maintenance.find(x => x.type_id === mt.id)
+              return <MaintCard key={mt.id} mt={mt} record={m} currentKm={car.current_km}
+                onEdit={() => setEditMaintType(mt.id)} onDelete={() => handleDeleteMaint(mt.id)} />
+            })}
           </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead>
-                <tr style={{ borderBottom: `1px solid ${theme.border}` }}>
-                  {['Elemento', 'Estado', 'Último (km)', 'Fecha últ.', 'Próximo (km)', 'Fecha próx.', 'Coste', ''].map((h, i) => <th key={i} style={css.th}>{h}</th>)}
-                </tr>
-              </thead>
-              <tbody>
-                {MAINT_TYPES.map(mt => {
-                  const m = maintenance.find(x => x.type_id === mt.id)
-                  const status = m ? getMaintStatus(m, car.current_km) : null
-                  return (
-                    <tr key={mt.id} style={{ borderBottom: `1px solid ${theme.border}`, cursor: 'pointer' }}
-                      onClick={() => setEditMaintType(mt.id)}
-                      onMouseEnter={e => e.currentTarget.style.background = theme.cardHover}
-                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                      <td style={{ ...css.td, fontWeight: 600 }}>{mt.emoji} {mt.name}</td>
-                      <td style={css.td}>{status ? <StatusBadge status={status} /> : <span style={{ color: theme.mutedLight, fontSize: 12 }}>Sin datos</span>}</td>
-                      <td style={{ ...css.td, color: theme.muted }}>{m ? m.last_km.toLocaleString() : '—'}</td>
-                      <td style={{ ...css.td, color: theme.muted }}>{m?.last_date || '—'}</td>
-                      <td style={{ ...css.td, fontWeight: 600 }}>{m ? m.next_km.toLocaleString() : '—'}</td>
-                      <td style={{ ...css.td, color: theme.muted }}>{m?.next_date || '—'}</td>
-                      <td style={{ ...css.td, color: theme.muted }}>{m?.cost ? `${m.cost}€` : '—'}</td>
-                      <td style={css.td}>
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          <button onClick={e => { e.stopPropagation(); setEditMaintType(mt.id) }} style={css.btnSm(theme.accentSoft, theme.accent)}><Edit2 size={12} /></button>
-                          {m && <button onClick={e => { e.stopPropagation(); handleDeleteMaint(mt.id) }} style={css.btnSm(theme.redSoft, theme.red)}><Trash2 size={12} /></button>}
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+        ) : (
+          /* Desktop: table */
+          <div style={{ ...css.card, padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: `1px solid ${theme.border}` }}>
+              <h3 style={css.h3}><Wrench size={16} style={{ marginRight: 6 }} />Mantenimientos</h3>
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ borderBottom: `1px solid ${theme.border}` }}>
+                    {['Elemento', 'Estado', 'Último (km)', 'Fecha últ.', 'Próximo (km)', 'Fecha próx.', 'Coste', ''].map((h, i) => <th key={i} style={css.th}>{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {MAINT_TYPES.map(mt => {
+                    const m = maintenance.find(x => x.type_id === mt.id)
+                    const status = m ? getMaintStatus(m, car.current_km) : null
+                    return (
+                      <tr key={mt.id} style={{ borderBottom: `1px solid ${theme.border}`, cursor: 'pointer' }}
+                        onClick={() => setEditMaintType(mt.id)}
+                        onMouseEnter={e => e.currentTarget.style.background = theme.cardHover}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                        <td style={{ ...css.td, fontWeight: 600 }}>{mt.emoji} {mt.name}</td>
+                        <td style={css.td}>{status ? <StatusBadge status={status} /> : <span style={{ color: theme.mutedLight, fontSize: 12 }}>Sin datos</span>}</td>
+                        <td style={{ ...css.td, color: theme.muted }}>{m ? m.last_km.toLocaleString() : '—'}</td>
+                        <td style={{ ...css.td, color: theme.muted }}>{m?.last_date || '—'}</td>
+                        <td style={{ ...css.td, fontWeight: 600 }}>{m ? m.next_km.toLocaleString() : '—'}</td>
+                        <td style={{ ...css.td, color: theme.muted }}>{m?.next_date || '—'}</td>
+                        <td style={{ ...css.td, color: theme.muted }}>{m?.cost ? `${m.cost}€` : '—'}</td>
+                        <td style={css.td}>
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <button onClick={e => { e.stopPropagation(); setEditMaintType(mt.id) }} style={css.btnSm(theme.accentSoft, theme.accent)}><Edit2 size={12} /></button>
+                            {m && <button onClick={e => { e.stopPropagation(); handleDeleteMaint(mt.id) }} style={css.btnSm(theme.redSoft, theme.red)}><Trash2 size={12} /></button>}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        )
       )}
 
       {/* Parts Tab */}
-      {activeTab === 'parts' && <PartsTab carId={car.id} parts={parts} onAdd={handleAddPart} onDelete={handleDeletePart} />}
+      {activeTab === 'parts' && <PartsTab carId={car.id} parts={parts} onAdd={handleAddPart} onDelete={handleDeletePart} isMobile={mob} />}
 
       {/* KM History Tab */}
       {activeTab === 'km' && (
         <div style={{ ...css.card, padding: 0, overflow: 'hidden' }}>
-          <div style={{ ...css.flexBetween, padding: '16px 20px', borderBottom: `1px solid ${theme.border}` }}>
-            <h3 style={css.h3}><TrendingUp size={16} style={{ marginRight: 6 }} />Historial de Kilómetros</h3>
+          <div style={{ ...css.flexBetween, padding: mob ? '12px 14px' : '16px 20px', borderBottom: `1px solid ${theme.border}` }}>
+            <h3 style={css.h3}><TrendingUp size={16} style={{ marginRight: 6 }} />Kilómetros</h3>
             <button onClick={() => setShowKmModal(true)} style={css.btnSm(theme.accent, '#000')}><Plus size={12} /> Registrar</button>
           </div>
           {kmLogs.length === 0 ? (
             <p style={{ padding: 20, color: theme.muted, textAlign: 'center' }}>Sin registros aún</p>
           ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead>
-                <tr style={{ borderBottom: `1px solid ${theme.border}` }}>
-                  {['Fecha', 'Kilómetros', 'Notas'].map((h, i) => <th key={i} style={css.th}>{h}</th>)}
-                </tr>
-              </thead>
-              <tbody>
-                {kmLogs.map(l => (
-                  <tr key={l.id} style={{ borderBottom: `1px solid ${theme.border}` }}>
-                    <td style={css.td}>{l.date}</td>
-                    <td style={{ ...css.td, fontWeight: 700 }}>{l.km.toLocaleString()} km</td>
-                    <td style={{ ...css.td, color: theme.muted }}>{l.notes || '—'}</td>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ borderBottom: `1px solid ${theme.border}` }}>
+                    {['Fecha', 'Kilómetros', 'Notas'].map((h, i) => <th key={i} style={css.th}>{h}</th>)}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {kmLogs.map(l => (
+                    <tr key={l.id} style={{ borderBottom: `1px solid ${theme.border}` }}>
+                      <td style={{ ...css.td, fontSize: mob ? 12 : 13 }}>{l.date}</td>
+                      <td style={{ ...css.td, fontWeight: 700 }}>{l.km.toLocaleString()} km</td>
+                      <td style={{ ...css.td, color: theme.muted, fontSize: mob ? 12 : 13 }}>{l.notes || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       )}
