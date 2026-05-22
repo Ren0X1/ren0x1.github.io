@@ -8,7 +8,7 @@ import { theme, css } from '../lib/theme.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
 import {
   updateCar, getMaintenanceRecords, upsertMaintenanceRecord,
-  deleteMaintenanceRecord, getKmLogs, createKmLog,
+  deleteMaintenanceRecord, getKmLogs, createKmLog, deleteKmLog,
   getCarParts, createCarPart, deleteCarPart, getFuelLogs
 } from '../lib/supabase.js'
 import { MAINT_TYPES, FUEL_TYPES, TRANS_TYPES, getMaintStatus } from '../lib/constants.js'
@@ -278,8 +278,23 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
   const handleSaveKm = async (data) => {
     try {
       await createKmLog({ car_id: car.id, km: data.km, date: data.date, notes: data.notes })
-      if (data.km > car.current_km) { const updated = await updateCar(car.id, { current_km: data.km }); setCar(updated) }
+      const updated = await updateCar(car.id, { current_km: data.km })
+      setCar(updated)
       setShowKmModal(false); onToast('Kilómetros registrados'); loadData()
+    } catch (err) { onToast('Error: ' + err.message, 'error') }
+  }
+  const handleDeleteKm = async (logId) => {
+    try {
+      await deleteKmLog(logId)
+      // Recalculate current_km from remaining logs
+      const remaining = kmLogs.filter(l => l.id !== logId)
+      if (remaining.length > 0) {
+        const sorted = [...remaining].sort((a, b) => new Date(b.date) - new Date(a.date))
+        const latest = sorted[0]
+        const updated = await updateCar(car.id, { current_km: latest.km })
+        setCar(updated)
+      }
+      onToast('Registro eliminado'); loadData()
     } catch (err) { onToast('Error: ' + err.message, 'error') }
   }
   const handleSaveMaint = async (typeId, formData) => {
@@ -436,7 +451,7 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
                   <tr style={{ borderBottom: `1px solid ${theme.border}` }}>
-                    {['Fecha', 'Kilómetros', 'Notas'].map((h, i) => <th key={i} style={css.th}>{h}</th>)}
+                    {['Fecha', 'Kilómetros', 'Notas', ''].map((h, i) => <th key={i} style={css.th}>{h}</th>)}
                   </tr>
                 </thead>
                 <tbody>
@@ -445,6 +460,9 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
                       <td style={{ ...css.td, fontSize: mob ? 12 : 13 }}>{l.date}</td>
                       <td style={{ ...css.td, fontWeight: 700 }}>{l.km.toLocaleString()} km</td>
                       <td style={{ ...css.td, color: theme.muted, fontSize: mob ? 12 : 13 }}>{l.notes || '—'}</td>
+                      <td style={css.td}>
+                        <button onClick={() => handleDeleteKm(l.id)} style={css.btnSm(theme.redSoft, theme.red)}><Trash2 size={12} /></button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

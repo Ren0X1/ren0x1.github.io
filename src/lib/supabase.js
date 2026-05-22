@@ -115,6 +115,11 @@ export async function createKmLog(log) {
   return data
 }
 
+export async function deleteKmLog(id) {
+  const { error } = await supabase.from('km_logs').delete().eq('id', id)
+  if (error) throw error
+}
+
 // ─── Maintenance Records ───
 
 export async function getMaintenanceRecords(carId) {
