@@ -6,7 +6,7 @@
   <p><strong>El taller de los pibes</strong></p>
   <p>App de control de mantenimiento de vehículos para ti y tus amigos.<br/>Gratis, instalable en el móvil, desplegada en GitHub Pages con Supabase.</p>
   <p>
-    <a href="https://ren0x1.github.io/">🌐 Ver la app</a>
+    <a href="https://loscolegones.com/">🌐 Ver la app</a>
   </p>
 </div>
 
