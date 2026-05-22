@@ -5,6 +5,7 @@ import Login from './components/Login.jsx'
 import Nav from './components/Nav.jsx'
 import Dashboard from './components/Dashboard.jsx'
 import AdminPanel from './components/AdminPanel.jsx'
+import Workshops from './components/Workshops.jsx'
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(() => {
@@ -31,6 +32,7 @@ export default function App() {
     <div style={{ minHeight: '100vh', background: theme.bg, color: theme.text, fontSize: 14 }}>
       <Nav user={currentUser} view={view} setView={setView} onLogout={handleLogout} />
       {view === 'dashboard' && <Dashboard user={currentUser} onToast={onToast} />}
+      {view === 'workshops' && <Workshops user={currentUser} onToast={onToast} />}
       {view === 'admin' && currentUser.role === 'admin' && <AdminPanel onToast={onToast} />}
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>

@@ -194,3 +194,66 @@ export async function deleteCarPart(id) {
   const { error } = await supabase.from('car_parts').delete().eq('id', id)
   if (error) throw error
 }
+
+// ─── Fuel Logs (Repostajes) ───
+
+export async function getFuelLogs(carId) {
+  const { data, error } = await supabase
+    .from('fuel_logs')
+    .select('*')
+    .eq('car_id', carId)
+    .order('date', { ascending: false })
+  if (error) throw error
+  return data
+}
+
+export async function createFuelLog(log) {
+  const { data, error } = await supabase
+    .from('fuel_logs')
+    .insert(log)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteFuelLog(id) {
+  const { error } = await supabase.from('fuel_logs').delete().eq('id', id)
+  if (error) throw error
+}
+
+// ─── Workshops (Talleres) ───
+
+export async function getWorkshops() {
+  const { data, error } = await supabase
+    .from('workshops')
+    .select('*, profiles(name)')
+    .order('rating', { ascending: false })
+  if (error) throw error
+  return data
+}
+
+export async function createWorkshop(ws) {
+  const { data, error } = await supabase
+    .from('workshops')
+    .insert(ws)
+    .select('*, profiles(name)')
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteWorkshop(id) {
+  const { error } = await supabase.from('workshops').delete().eq('id', id)
+  if (error) throw error
+}
+
+// ─── Expense helpers ───
+
+export async function getAllExpenses(carId) {
+  const [maint, fuel] = await Promise.all([
+    getMaintenanceRecords(carId),
+    getFuelLogs(carId),
+  ])
+  return { maint, fuel }
+}

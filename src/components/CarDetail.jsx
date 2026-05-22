@@ -2,17 +2,20 @@ import { useState, useEffect, useMemo } from 'react'
 import {
   Wrench, Edit2, Trash2, ChevronLeft, Gauge, Calendar,
   Fuel, Settings, TrendingUp, Save, AlertTriangle, CheckCircle,
-  Clock, Plus, Package, ExternalLink
+  Clock, Plus, Package, ExternalLink, FileDown, Euro
 } from 'lucide-react'
 import { theme, css } from '../lib/theme.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
 import {
   updateCar, getMaintenanceRecords, upsertMaintenanceRecord,
   deleteMaintenanceRecord, getKmLogs, createKmLog,
-  getCarParts, createCarPart, deleteCarPart
+  getCarParts, createCarPart, deleteCarPart, getFuelLogs
 } from '../lib/supabase.js'
 import { MAINT_TYPES, FUEL_TYPES, TRANS_TYPES, getMaintStatus } from '../lib/constants.js'
 import { Modal, Field, Stat, StatusBadge, Loader, ResponsiveGrid2 } from './ui.jsx'
+import FuelTab from './FuelTab.jsx'
+import ExpenseTab from './ExpenseTab.jsx'
+import { exportCarPdf } from '../lib/pdfExport.js'
 
 const today = new Date().toISOString().split('T')[0]
 
@@ -249,6 +252,7 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
   const [maintenance, setMaintenance] = useState([])
   const [kmLogs, setKmLogs] = useState([])
   const [parts, setParts] = useState([])
+  const [fuelLogs, setFuelLogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [showKmModal, setShowKmModal] = useState(false)
   const [editMaintType, setEditMaintType] = useState(null)
@@ -257,8 +261,8 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
 
   const loadData = async () => {
     try {
-      const [maint, logs, carParts] = await Promise.all([getMaintenanceRecords(car.id), getKmLogs(car.id), getCarParts(car.id)])
-      setMaintenance(maint); setKmLogs(logs); setParts(carParts)
+      const [maint, logs, carParts, fuel] = await Promise.all([getMaintenanceRecords(car.id), getKmLogs(car.id), getCarParts(car.id), getFuelLogs(car.id)])
+      setMaintenance(maint); setKmLogs(logs); setParts(carParts); setFuelLogs(fuel)
     } catch (err) { onToast('Error cargando datos: ' + err.message, 'error') }
     finally { setLoading(false) }
   }
@@ -306,6 +310,8 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
   const detailTabs = [
     { id: 'maint', icon: <Wrench size={14} />, label: mob ? 'Mant.' : 'Mantenimientos' },
     { id: 'parts', icon: <Package size={14} />, label: 'Recambios' },
+    { id: 'fuel', icon: <Fuel size={14} />, label: mob ? 'Fuel' : 'Repostajes' },
+    { id: 'expenses', icon: <Euro size={14} />, label: 'Gastos' },
     { id: 'km', icon: <TrendingUp size={14} />, label: mob ? 'Km' : 'Kilómetros' },
   ]
 
@@ -330,6 +336,10 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
           <div style={{ display: 'flex', gap: 8, alignSelf: mob ? 'stretch' : 'flex-start' }}>
             <button onClick={() => setShowKmModal(true)} style={{ ...css.btn(), flex: mob ? 1 : 'none', justifyContent: 'center' }}>
               <TrendingUp size={14} /> {mob ? 'Km' : 'Registrar km'}
+            </button>
+            <button onClick={() => exportCarPdf({ car, maintenance, kmLogs, fuelLogs, parts })}
+              style={{ ...css.btnOutline, color: '#8b5cf6', borderColor: 'rgba(139,92,246,0.3)' }} title="Exportar PDF">
+              <FileDown size={14} />
             </button>
             <button onClick={() => setShowEditCar(true)} style={css.btnOutline}><Edit2 size={14} /></button>
           </div>
@@ -405,6 +415,12 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
 
       {/* Parts Tab */}
       {activeTab === 'parts' && <PartsTab carId={car.id} parts={parts} onAdd={handleAddPart} onDelete={handleDeletePart} isMobile={mob} />}
+
+      {/* Fuel Tab */}
+      {activeTab === 'fuel' && <FuelTab carId={car.id} carKm={car.current_km} fuelLogs={fuelLogs} onReload={loadData} onToast={onToast} isMobile={mob} />}
+
+      {/* Expenses Tab */}
+      {activeTab === 'expenses' && <ExpenseTab maintenance={maintenance} fuelLogs={fuelLogs} isMobile={mob} />}
 
       {/* KM History Tab */}
       {activeTab === 'km' && (
