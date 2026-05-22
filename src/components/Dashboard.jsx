@@ -7,7 +7,7 @@ import { theme, css } from '../lib/theme.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
 import { getCars, createCar, deleteCar, getMaintenanceRecords, getCarParts, getItvRecords } from '../lib/supabase.js'
 import { FUEL_TYPES, TRANS_TYPES, getMaintStatus, formatDate } from '../lib/constants.js'
-import { Modal, Field, Loader, ResponsiveGrid2 } from './ui.jsx'
+import { Modal, Field, Loader, ResponsiveGrid2, NumInput } from './ui.jsx'
 import CarDetail from './CarDetail.jsx'
 
 function CarFormModal({ open, onClose, onSave }) {
@@ -28,7 +28,7 @@ function CarFormModal({ open, onClose, onSave }) {
         <Field label="Matrícula"><input style={css.input} value={form.plate} onChange={e => set('plate', e.target.value)} placeholder="1234 ABC" /></Field>
         <Field label="Marca"><input style={css.input} value={form.brand} onChange={e => set('brand', e.target.value)} placeholder="BMW" /></Field>
         <Field label="Modelo"><input style={css.input} value={form.model} onChange={e => set('model', e.target.value)} placeholder="320d" /></Field>
-        <Field label="Año"><input style={css.input} type="number" value={form.year} onChange={e => set('year', +e.target.value)} /></Field>
+        <Field label="Año"><NumInput value={form.year} onChange={e => set('year', +e.target.value)} /></Field>
         <Field label="Transmisión">
           <select style={css.select} value={form.transmission} onChange={e => set('transmission', e.target.value)}>
             {TRANS_TYPES.map(t => <option key={t}>{t}</option>)}
@@ -39,7 +39,7 @@ function CarFormModal({ open, onClose, onSave }) {
             {FUEL_TYPES.map(t => <option key={t}>{t}</option>)}
           </select>
         </Field>
-        <Field label="Km actuales"><input style={css.input} type="number" value={form.current_km} onChange={e => set('current_km', +e.target.value)} /></Field>
+        <Field label="Km actuales"><NumInput value={form.current_km} onChange={e => set('current_km', +e.target.value)} /></Field>
       </ResponsiveGrid2>
       <Field label="Notas"><input style={css.input} value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Opcional" /></Field>
       <div style={{ ...css.flex, justifyContent: 'flex-end', marginTop: 8, gap: 8 }}>

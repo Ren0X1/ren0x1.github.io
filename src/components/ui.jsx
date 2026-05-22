@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { CheckCircle, Clock, AlertTriangle, X } from 'lucide-react'
 import { theme, css } from '../lib/theme.js'
 
@@ -75,4 +76,50 @@ export function Toast({ message, type = 'success', onClose }) {
       <button onClick={onClose} style={{ background: 'none', border: 'none', color: theme.muted, cursor: 'pointer' }}><X size={14} /></button>
     </div>
   )
+}
+
+export function DateInput({ value, onChange, style: s, ...props }) {
+  const toDisplay = (iso) => {
+    if (!iso) return ''
+    const p = iso.split('-')
+    return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : ''
+  }
+  const [text, setText] = useState(toDisplay(value))
+
+  useEffect(() => { setText(toDisplay(value)) }, [value])
+
+  const handleChange = (e) => {
+    let raw = e.target.value.replace(/[^\d]/g, '')
+    if (raw.length > 8) raw = raw.slice(0, 8)
+    let display = raw
+    if (raw.length > 2) display = raw.slice(0, 2) + '/' + raw.slice(2)
+    if (raw.length > 4) display = raw.slice(0, 2) + '/' + raw.slice(2, 4) + '/' + raw.slice(4)
+    setText(display)
+    if (raw.length === 8) {
+      const iso = `${raw.slice(4)}-${raw.slice(2, 4)}-${raw.slice(0, 2)}`
+      onChange({ target: { value: iso } })
+    }
+  }
+
+  return <input type="text" inputMode="numeric" placeholder="DD/MM/AAAA"
+    value={text} onChange={handleChange} style={{ ...css.input, ...s }} {...props} />
+}
+
+export function NumInput({ value, onChange, step, style: s, ...props }) {
+  const [text, setText] = useState(value != null && value !== 0 ? String(value) : '')
+
+  useEffect(() => {
+    setText(value != null && value !== 0 ? String(value) : '')
+  }, [value])
+
+  const handleChange = (e) => {
+    const v = e.target.value
+    setText(v)
+    const num = v === '' ? 0 : parseFloat(v)
+    if (!isNaN(num)) onChange({ target: { value: num } })
+  }
+
+  return <input type="number" step={step} value={text} onChange={handleChange}
+    onFocus={e => { if (e.target.value === '0') { setText(''); } }}
+    placeholder="0" style={{ ...css.input, ...s }} {...props} />
 }

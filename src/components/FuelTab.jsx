@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Fuel, Plus, Trash2, Save, TrendingDown } from 'lucide-react'
 import { theme, css } from '../lib/theme.js'
 import { createFuelLog, deleteFuelLog } from '../lib/supabase.js'
-import { Modal, Field, Stat, ResponsiveGrid2 } from './ui.jsx'
+import { Modal, Field, Stat, ResponsiveGrid2, DateInput, NumInput } from './ui.jsx'
 
 const today = new Date().toISOString().split('T')[0]
 
@@ -20,10 +20,10 @@ function FuelFormModal({ open, onClose, onSave, carKm }) {
   return (
     <Modal open={open} onClose={onClose} title="Nuevo Repostaje">
       <ResponsiveGrid2>
-        <Field label="Kilómetros"><input style={css.input} type="number" value={form.km} onChange={e => set('km', +e.target.value)} /></Field>
-        <Field label="Fecha"><input style={css.input} type="date" value={form.date} onChange={e => set('date', e.target.value)} /></Field>
-        <Field label="Litros"><input style={css.input} type="number" step="0.01" value={form.liters} onChange={e => set('liters', +e.target.value)} /></Field>
-        <Field label="Precio/litro (€)"><input style={css.input} type="number" step="0.001" value={form.price_liter} onChange={e => set('price_liter', +e.target.value)} /></Field>
+        <Field label="Kilómetros"><NumInput value={form.km} onChange={e => set('km', +e.target.value)} /></Field>
+        <Field label="Fecha"><DateInput value={form.date} onChange={e => set('date', e.target.value)} /></Field>
+        <Field label="Litros"><NumInput step="0.01" value={form.liters} onChange={e => set('liters', +e.target.value)} /></Field>
+        <Field label="Precio/litro (€)"><NumInput step="0.001" value={form.price_liter} onChange={e => set('price_liter', +e.target.value)} /></Field>
       </ResponsiveGrid2>
       <div style={{ ...css.card, padding: 12, marginBottom: 14, background: theme.bg }}>
         <span style={{ fontSize: 12, color: theme.muted }}>Total: </span>

@@ -3,7 +3,7 @@ import { ShieldCheck, ShieldAlert, ShieldX, Plus, Edit2, Trash2, Save, Calendar 
 import { theme, css } from '../lib/theme.js'
 import { formatDate } from '../lib/constants.js'
 import { createItvRecord, updateItvRecord, deleteItvRecord } from '../lib/supabase.js'
-import { Modal, Field, ResponsiveGrid2 } from './ui.jsx'
+import { Modal, Field, ResponsiveGrid2, DateInput, NumInput } from './ui.jsx'
 
 const RESULTS = [
   { value: 'favorable', label: 'Favorable', color: theme.green, desc: 'Sin defectos' },
@@ -70,10 +70,10 @@ function ItvFormModal({ open, onClose, onSave, initial, isEditing }) {
     <Modal open={open} onClose={onClose} title={isEditing ? 'Editar ITV' : 'Nueva ITV'}>
       <ResponsiveGrid2>
         <Field label="Fecha inspección">
-          <input style={css.input} type="date" value={form.inspection_date} onChange={e => set('inspection_date', e.target.value)} />
+          <DateInput value={form.inspection_date} onChange={e => set('inspection_date', e.target.value)} />
         </Field>
         <Field label="Fecha caducidad">
-          <input style={css.input} type="date" value={form.expiry_date} onChange={e => set('expiry_date', e.target.value)} />
+          <DateInput value={form.expiry_date} onChange={e => set('expiry_date', e.target.value)} />
         </Field>
       </ResponsiveGrid2>
 
@@ -119,7 +119,7 @@ function ItvFormModal({ open, onClose, onSave, initial, isEditing }) {
           <input style={css.input} value={form.station} onChange={e => set('station', e.target.value)} placeholder="Nombre estación" />
         </Field>
         <Field label="Coste (€)">
-          <input style={css.input} type="number" value={form.cost} onChange={e => set('cost', +e.target.value)} />
+          <NumInput value={form.cost} onChange={e => set('cost', +e.target.value)} />
         </Field>
       </ResponsiveGrid2>
       <Field label="Notas">

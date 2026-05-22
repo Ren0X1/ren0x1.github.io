@@ -12,7 +12,7 @@ import {
   getCarParts, createCarPart, deleteCarPart, getFuelLogs, getItvRecords
 } from '../lib/supabase.js'
 import { MAINT_TYPES, FUEL_TYPES, TRANS_TYPES, getMaintStatus, formatDate } from '../lib/constants.js'
-import { Modal, Field, Stat, StatusBadge, Loader, ResponsiveGrid2 } from './ui.jsx'
+import { Modal, Field, Stat, StatusBadge, Loader, ResponsiveGrid2, DateInput, NumInput } from './ui.jsx'
 import FuelTab from './FuelTab.jsx'
 import ExpenseTab from './ExpenseTab.jsx'
 import ItvCard from './ItvCard.jsx'
@@ -81,8 +81,8 @@ function KmLogModal({ open, onClose, onSave, carKm }) {
   const handleSave = async () => { setSaving(true); try { await onSave({ km, date, notes }) } finally { setSaving(false) } }
   return (
     <Modal open={open} onClose={onClose} title="Registrar Kilómetros">
-      <Field label="Kilómetros"><input style={css.input} type="number" value={km} onChange={e => setKm(+e.target.value)} /></Field>
-      <Field label="Fecha"><input style={css.input} type="date" value={date} onChange={e => setDate(e.target.value)} /></Field>
+      <Field label="Kilómetros"><NumInput value={km} onChange={e => setKm(+e.target.value)} /></Field>
+      <Field label="Fecha"><DateInput value={date} onChange={e => setDate(e.target.value)} /></Field>
       <Field label="Notas"><input style={css.input} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Opcional" /></Field>
       <div style={{ ...css.flex, justifyContent: 'flex-end', marginTop: 8, gap: 8 }}>
         <button onClick={onClose} style={css.btnOutline}>Cancelar</button>
@@ -114,13 +114,13 @@ function MaintModal({ open, onClose, onSave, typeId, existing, currentKm }) {
         Intervalo: {mtype?.defKm ? `${mtype.defKm.toLocaleString()} km` : '—'}{mtype?.defMonths ? ` / ${mtype.defMonths} meses` : ''}
       </p>
       <ResponsiveGrid2>
-        <Field label="Último cambio (km)"><input style={css.input} type="number" value={form.last_km} onChange={e => autoCalcNext(+e.target.value, form.last_date)} /></Field>
-        <Field label="Fecha último cambio"><input style={css.input} type="date" value={form.last_date} onChange={e => autoCalcNext(form.last_km, e.target.value)} /></Field>
-        <Field label="Próximo cambio (km)"><input style={css.input} type="number" value={form.next_km} onChange={e => set('next_km', +e.target.value)} /></Field>
-        <Field label="Fecha próximo cambio"><input style={css.input} type="date" value={form.next_date} onChange={e => set('next_date', e.target.value)} /></Field>
+        <Field label="Último cambio (km)"><NumInput value={form.last_km} onChange={e => autoCalcNext(+e.target.value, form.last_date)} /></Field>
+        <Field label="Fecha último cambio"><DateInput value={form.last_date} onChange={e => autoCalcNext(form.last_km, e.target.value)} /></Field>
+        <Field label="Próximo cambio (km)"><NumInput value={form.next_km} onChange={e => set('next_km', +e.target.value)} /></Field>
+        <Field label="Fecha próximo cambio"><DateInput value={form.next_date} onChange={e => set('next_date', e.target.value)} /></Field>
       </ResponsiveGrid2>
       <ResponsiveGrid2>
-        <Field label="Coste (€)"><input style={css.input} type="number" value={form.cost} onChange={e => set('cost', +e.target.value)} /></Field>
+        <Field label="Coste (€)"><NumInput value={form.cost} onChange={e => set('cost', +e.target.value)} /></Field>
         <Field label="Notas"><input style={css.input} value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Marca, taller..." /></Field>
       </ResponsiveGrid2>
       <div style={{ ...css.flex, justifyContent: 'flex-end', marginTop: 8, gap: 8 }}>
@@ -142,7 +142,7 @@ function CarEditModal({ open, onClose, onSave, car }) {
         <Field label="Matrícula"><input style={css.input} value={form.plate} onChange={e => set('plate', e.target.value)} /></Field>
         <Field label="Marca"><input style={css.input} value={form.brand} onChange={e => set('brand', e.target.value)} /></Field>
         <Field label="Modelo"><input style={css.input} value={form.model} onChange={e => set('model', e.target.value)} /></Field>
-        <Field label="Año"><input style={css.input} type="number" value={form.year} onChange={e => set('year', +e.target.value)} /></Field>
+        <Field label="Año"><NumInput value={form.year} onChange={e => set('year', +e.target.value)} /></Field>
         <Field label="Transmisión">
           <select style={css.select} value={form.transmission} onChange={e => set('transmission', e.target.value)}>
             {TRANS_TYPES.map(t => <option key={t}>{t}</option>)}
