@@ -262,3 +262,132 @@ export async function getAllExpenses(carId) {
   ])
   return { maint, fuel }
 }
+
+// ─── ITV Records ───
+
+export async function getItvRecords(carId) {
+  const { data, error } = await supabase
+    .from('itv_records')
+    .select('*')
+    .eq('car_id', carId)
+    .order('inspection_date', { ascending: false })
+  if (error) throw error
+  return data
+}
+
+export async function createItvRecord(record) {
+  const { data, error } = await supabase
+    .from('itv_records')
+    .insert(record)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function updateItvRecord(id, updates) {
+  const { data, error } = await supabase
+    .from('itv_records')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteItvRecord(id) {
+  const { error } = await supabase.from('itv_records').delete().eq('id', id)
+  if (error) throw error
+}
+
+// ─── Groups ───
+
+export async function getGroups(userId) {
+  const { data, error } = await supabase
+    .from('group_members')
+    .select('group_id, groups(id, name, created_by, created_at, profiles(name))')
+    .eq('user_id', userId)
+  if (error) throw error
+  return data.map(gm => gm.groups).filter(Boolean)
+}
+
+export async function createGroup(name, createdBy) {
+  const { data, error } = await supabase
+    .from('groups')
+    .insert({ name, created_by: createdBy })
+    .select()
+    .single()
+  if (error) throw error
+  // Auto-add creator as member
+  await supabase.from('group_members').insert({ group_id: data.id, user_id: createdBy })
+  return data
+}
+
+export async function deleteGroup(id) {
+  const { error } = await supabase.from('groups').delete().eq('id', id)
+  if (error) throw error
+}
+
+export async function getGroupMembers(groupId) {
+  const { data, error } = await supabase
+    .from('group_members')
+    .select('*, profiles(id, name, username)')
+    .eq('group_id', groupId)
+  if (error) throw error
+  return data
+}
+
+export async function addGroupMember(groupId, userId) {
+  const { data, error } = await supabase
+    .from('group_members')
+    .insert({ group_id: groupId, user_id: userId })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function removeGroupMember(groupId, userId) {
+  const { error } = await supabase
+    .from('group_members')
+    .delete()
+    .eq('group_id', groupId)
+    .eq('user_id', userId)
+  if (error) throw error
+}
+
+// ─── Group Messages ───
+
+export async function getGroupMessages(groupId) {
+  const { data, error } = await supabase
+    .from('group_messages')
+    .select('*, profiles(name)')
+    .eq('group_id', groupId)
+    .order('created_at', { ascending: true })
+    .limit(200)
+  if (error) throw error
+  return data
+}
+
+export async function sendGroupMessage(groupId, userId, message) {
+  const { data, error } = await supabase
+    .from('group_messages')
+    .insert({ group_id: groupId, user_id: userId, message })
+    .select('*, profiles(name)')
+    .single()
+  if (error) throw error
+  return data
+}
+
+// ─── Member Cars (read-only) ───
+
+export async function getMemberCars(userId) {
+  const { data, error } = await supabase
+    .from('cars')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at')
+  if (error) throw error
+  return data
+}

@@ -9,12 +9,13 @@ import { useIsMobile } from '../lib/useIsMobile.js'
 import {
   updateCar, getMaintenanceRecords, upsertMaintenanceRecord,
   deleteMaintenanceRecord, getKmLogs, createKmLog, deleteKmLog,
-  getCarParts, createCarPart, deleteCarPart, getFuelLogs
+  getCarParts, createCarPart, deleteCarPart, getFuelLogs, getItvRecords
 } from '../lib/supabase.js'
 import { MAINT_TYPES, FUEL_TYPES, TRANS_TYPES, getMaintStatus } from '../lib/constants.js'
 import { Modal, Field, Stat, StatusBadge, Loader, ResponsiveGrid2 } from './ui.jsx'
 import FuelTab from './FuelTab.jsx'
 import ExpenseTab from './ExpenseTab.jsx'
+import ItvCard from './ItvCard.jsx'
 import { exportCarPdf } from '../lib/pdfExport.js'
 
 const today = new Date().toISOString().split('T')[0]
@@ -253,6 +254,7 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
   const [kmLogs, setKmLogs] = useState([])
   const [parts, setParts] = useState([])
   const [fuelLogs, setFuelLogs] = useState([])
+  const [itvRecords, setItvRecords] = useState([])
   const [loading, setLoading] = useState(true)
   const [showKmModal, setShowKmModal] = useState(false)
   const [editMaintType, setEditMaintType] = useState(null)
@@ -261,8 +263,8 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
 
   const loadData = async () => {
     try {
-      const [maint, logs, carParts, fuel] = await Promise.all([getMaintenanceRecords(car.id), getKmLogs(car.id), getCarParts(car.id), getFuelLogs(car.id)])
-      setMaintenance(maint); setKmLogs(logs); setParts(carParts); setFuelLogs(fuel)
+      const [maint, logs, carParts, fuel, itv] = await Promise.all([getMaintenanceRecords(car.id), getKmLogs(car.id), getCarParts(car.id), getFuelLogs(car.id), getItvRecords(car.id)])
+      setMaintenance(maint); setKmLogs(logs); setParts(carParts); setFuelLogs(fuel); setItvRecords(itv)
     } catch (err) { onToast('Error cargando datos: ' + err.message, 'error') }
     finally { setLoading(false) }
   }
@@ -368,6 +370,9 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
         <Stat icon={<Clock size={18} color={theme.yellow} />} label="Próximos" value={stats.warn} color={theme.yellow} />
         <Stat icon={<AlertTriangle size={18} color={theme.red} />} label="Vencidos" value={stats.overdue} color={theme.red} />
       </div>
+
+      {/* ITV */}
+      <ItvCard carId={car.id} itvRecords={itvRecords} onReload={loadData} onToast={onToast} isMobile={mob} />
 
       {/* Tabs */}
       <TabBar tabs={detailTabs} active={activeTab} onChange={setActiveTab} isMobile={mob} />

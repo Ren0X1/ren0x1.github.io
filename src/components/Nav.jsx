@@ -1,4 +1,4 @@
-import { Car, Shield, LogOut, Wrench } from 'lucide-react'
+import { Car, Shield, LogOut, Wrench, Users } from 'lucide-react'
 import { theme, css } from '../lib/theme.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
 
@@ -6,6 +6,7 @@ export default function Nav({ user, view, setView, onLogout }) {
   const m = useIsMobile()
   const tabs = [
     { id: 'dashboard', icon: <Car size={16} />, label: 'Mis Coches' },
+    { id: 'groups', icon: <Users size={16} />, label: 'Grupos' },
     { id: 'workshops', icon: <Wrench size={16} />, label: 'Talleres' },
     ...(user.role === 'admin' ? [{ id: 'admin', icon: <Shield size={16} />, label: 'Admin' }] : []),
   ]

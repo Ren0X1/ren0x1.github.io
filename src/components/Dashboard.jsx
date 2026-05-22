@@ -5,7 +5,7 @@ import {
 } from 'lucide-react'
 import { theme, css } from '../lib/theme.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
-import { getCars, createCar, deleteCar, getMaintenanceRecords, getCarParts } from '../lib/supabase.js'
+import { getCars, createCar, deleteCar, getMaintenanceRecords, getCarParts, getItvRecords } from '../lib/supabase.js'
 import { FUEL_TYPES, TRANS_TYPES, getMaintStatus } from '../lib/constants.js'
 import { Modal, Field, Loader, ResponsiveGrid2 } from './ui.jsx'
 import CarDetail from './CarDetail.jsx'
@@ -66,8 +66,8 @@ export default function Dashboard({ user, onToast }) {
       setCars(data)
       const meta = {}
       for (const car of data) {
-        const [maint, parts] = await Promise.all([getMaintenanceRecords(car.id), getCarParts(car.id)])
-        meta[car.id] = { maint, partsCount: parts.length }
+        const [maint, parts, itv] = await Promise.all([getMaintenanceRecords(car.id), getCarParts(car.id), getItvRecords(car.id)])
+        meta[car.id] = { maint, partsCount: parts.length, itv: itv[0] || null }
       }
       setCarMeta(meta)
     } catch (err) { onToast('Error cargando coches: ' + err.message, 'error') }
@@ -123,9 +123,18 @@ export default function Dashboard({ user, onToast }) {
         ) : (
           <div style={{ display: 'grid', gap: 12 }}>
             {cars.map(car => {
-              const mt = carMeta[car.id] || { maint: [], partsCount: 0 }
+              const mt = carMeta[car.id] || { maint: [], partsCount: 0, itv: null }
               let overdue = 0, warn = 0
               mt.maint.forEach(r => { const s = getMaintStatus(r, car.current_km); if (s === 'overdue') overdue++; if (s === 'warn') warn++ })
+              // ITV status
+              let itvBadge = null
+              if (mt.itv) {
+                const exp = new Date(mt.itv.expiry_date)
+                const dLeft = Math.floor((exp - new Date()) / 86400000)
+                if (mt.itv.result === 'negativa') itvBadge = { bg: theme.redSoft, color: theme.red, text: 'ITV ✗' }
+                else if (dLeft < 0) itvBadge = { bg: theme.redSoft, color: theme.red, text: 'ITV caducada' }
+                else if (dLeft <= 30) itvBadge = { bg: theme.yellowSoft, color: theme.yellow, text: `ITV ${dLeft}d` }
+              }
               return (
                 <div key={car.id} onClick={() => setSelectedCarId(car.id)}
                   style={{ ...css.card, padding: 0, cursor: 'pointer', transition: 'all .15s', overflow: 'hidden' }}
@@ -141,6 +150,7 @@ export default function Dashboard({ user, onToast }) {
                         {overdue > 0 && <span style={css.badge(theme.redSoft, theme.red)}><AlertTriangle size={11} /> {overdue}</span>}
                         {warn > 0 && <span style={css.badge(theme.yellowSoft, theme.yellow)}><Clock size={11} /> {warn}</span>}
                         {overdue === 0 && warn === 0 && mt.maint.length > 0 && <span style={css.badge(theme.greenSoft, theme.green)}><CheckCircle size={11} /> OK</span>}
+                        {itvBadge && <span style={css.badge(itvBadge.bg, itvBadge.color)}>{itvBadge.text}</span>}
                         <button onClick={e => { e.stopPropagation(); handleDeleteCar(car.id) }} style={css.btnSm(theme.redSoft, theme.red)}><Trash2 size={12} /></button>
                       </div>
                     </div>
