@@ -32,3 +32,12 @@ export function getMaintStatus(maint, currentKm) {
   if (kmLeft <= 2000 || daysLeft <= 30) return 'warn'
   return 'ok'
 }
+
+// ─── Date formatting (DD/MM/YYYY) ───
+
+export function formatDate(dateStr) {
+  if (!dateStr) return '—'
+  const parts = dateStr.split('-')
+  if (parts.length !== 3) return dateStr
+  return `${parts[2]}/${parts[1]}/${parts[0]}`
+}

@@ -1,3 +1,4 @@
+import { formatDate } from '../lib/constants.js'
 import { useState } from 'react'
 import { Fuel, Plus, Trash2, Save, TrendingDown } from 'lucide-react'
 import { theme, css } from '../lib/theme.js'
@@ -103,7 +104,7 @@ export default function FuelTab({ carId, carKm, fuelLogs, onReload, onToast, isM
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13 }}>
                     <span style={{ fontWeight: 700 }}>{l.liters}L</span>
                     <span style={{ color: theme.accent, fontWeight: 600 }}>{l.total_cost?.toFixed(2)}€</span>
-                    <span style={{ color: theme.muted, fontSize: 11 }}>{l.date}</span>
+                    <span style={{ color: theme.muted, fontSize: 11 }}>{formatDate(l.date)}</span>
                   </div>
                   <div style={{ fontSize: 11, color: theme.muted, marginTop: 2 }}>
                     {l.km?.toLocaleString()} km · {l.price_liter}€/L{l.full_tank ? ' · Lleno' : ''}{l.notes ? ` · ${l.notes}` : ''}
@@ -124,7 +125,7 @@ export default function FuelTab({ carId, carKm, fuelLogs, onReload, onToast, isM
               <tbody>
                 {fuelLogs.map(l => (
                   <tr key={l.id} style={{ borderBottom: `1px solid ${theme.border}` }}>
-                    <td style={css.td}>{l.date}</td>
+                    <td style={css.td}>{formatDate(l.date)}</td>
                     <td style={{ ...css.td, color: theme.muted }}>{l.km?.toLocaleString()}</td>
                     <td style={{ ...css.td, fontWeight: 600 }}>{l.liters} L</td>
                     <td style={{ ...css.td, color: theme.muted }}>{l.price_liter}€</td>

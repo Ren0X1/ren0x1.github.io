@@ -1,6 +1,7 @@
-import { useState } from 'react'
-import { ShieldCheck, ShieldAlert, ShieldX, Plus, Edit2, Trash2, Save, AlertTriangle, Calendar } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { ShieldCheck, ShieldAlert, ShieldX, Plus, Edit2, Trash2, Save, Calendar } from 'lucide-react'
 import { theme, css } from '../lib/theme.js'
+import { formatDate } from '../lib/constants.js'
 import { createItvRecord, updateItvRecord, deleteItvRecord } from '../lib/supabase.js'
 import { Modal, Field, ResponsiveGrid2 } from './ui.jsx'
 
@@ -11,9 +12,10 @@ const RESULTS = [
 ]
 
 function getItvStatus(record) {
-  if (!record) return { status: 'none', label: 'Sin ITV', color: theme.mutedLight }
-  if (record.result === 'negativa') return { status: 'failed', label: 'No apta', color: theme.red }
+  if (!record) return { status: 'none', label: 'Sin ITV registrada', color: theme.mutedLight }
+  if (record.result === 'negativa') return { status: 'failed', label: 'No apta — Negativa', color: theme.red }
   if (record.result === 'desfavorable' && !record.resolved) return { status: 'defects', label: 'Pendiente reparar', color: theme.yellow }
+  if (!record.expiry_date) return { status: 'unknown', label: 'Sin fecha de caducidad', color: theme.muted }
 
   const today = new Date()
   const expiry = new Date(record.expiry_date)
@@ -22,23 +24,41 @@ function getItvStatus(record) {
   if (daysLeft < 0) return { status: 'expired', label: `Caducada hace ${Math.abs(daysLeft)} días`, color: theme.red }
   if (daysLeft <= 30) return { status: 'soon', label: `Caduca en ${daysLeft} días`, color: theme.yellow }
   if (daysLeft <= 60) return { status: 'approaching', label: `Caduca en ${daysLeft} días`, color: theme.accent }
-  return { status: 'valid', label: `Válida hasta ${record.expiry_date}`, color: theme.green }
+  return { status: 'valid', label: `Válida hasta ${formatDate(record.expiry_date)}`, color: theme.green }
 }
 
-function ItvFormModal({ open, onClose, onSave, initial }) {
-  const today = new Date().toISOString().split('T')[0]
-  const [form, setForm] = useState(initial || {
-    inspection_date: today, expiry_date: '', result: 'favorable',
-    station: '', defects: '', cost: 0, notes: '', resolved: false,
-  })
-  const [saving, setSaving] = useState(false)
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+function ItvFormModal({ open, onClose, onSave, initial, isEditing }) {
+  const todayStr = new Date().toISOString().split('T')[0]
 
-  // Auto-calculate expiry based on result
-  const setResult = (r) => {
-    set('result', r)
-    if (r === 'negativa') set('expiry_date', '')
+  const defaultForm = {
+    inspection_date: todayStr, expiry_date: '', result: 'favorable',
+    station: '', defects: '', cost: 0, notes: '', resolved: false,
   }
+
+  const [form, setForm] = useState(defaultForm)
+  const [saving, setSaving] = useState(false)
+
+  // Reset form when modal opens with new data
+  useEffect(() => {
+    if (open) {
+      if (initial) {
+        setForm({
+          inspection_date: initial.inspection_date || todayStr,
+          expiry_date: initial.expiry_date || '',
+          result: initial.result || 'favorable',
+          station: initial.station || '',
+          defects: initial.defects || '',
+          cost: initial.cost || 0,
+          notes: initial.notes || '',
+          resolved: initial.resolved || false,
+        })
+      } else {
+        setForm(defaultForm)
+      }
+    }
+  }, [open, initial])
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
   const handleSave = async () => {
     if (!form.inspection_date) return
@@ -47,16 +67,20 @@ function ItvFormModal({ open, onClose, onSave, initial }) {
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={initial ? 'Editar ITV' : 'Nueva ITV'}>
+    <Modal open={open} onClose={onClose} title={isEditing ? 'Editar ITV' : 'Nueva ITV'}>
       <ResponsiveGrid2>
-        <Field label="Fecha inspección"><input style={css.input} type="date" value={form.inspection_date} onChange={e => set('inspection_date', e.target.value)} /></Field>
-        <Field label="Fecha caducidad"><input style={css.input} type="date" value={form.expiry_date} onChange={e => set('expiry_date', e.target.value)} /></Field>
+        <Field label="Fecha inspección">
+          <input style={css.input} type="date" value={form.inspection_date} onChange={e => set('inspection_date', e.target.value)} />
+        </Field>
+        <Field label="Fecha caducidad">
+          <input style={css.input} type="date" value={form.expiry_date} onChange={e => set('expiry_date', e.target.value)} />
+        </Field>
       </ResponsiveGrid2>
 
       <Field label="Resultado">
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {RESULTS.map(r => (
-            <button key={r.value} onClick={() => setResult(r.value)} style={{
+            <button key={r.value} onClick={() => set('result', r.value)} type="button" style={{
               ...css.btn(form.result === r.value ? r.color : theme.bg, form.result === r.value ? '#000' : theme.muted),
               flex: 1, justifyContent: 'center', border: `1px solid ${form.result === r.value ? r.color : theme.border}`,
               fontSize: 12, padding: '8px 10px', minWidth: 100,
@@ -69,35 +93,44 @@ function ItvFormModal({ open, onClose, onSave, initial }) {
       </Field>
 
       {(form.result === 'desfavorable' || form.result === 'negativa') && (
-        <>
-          <Field label="Defectos encontrados">
-            <textarea style={{ ...css.input, minHeight: 70, resize: 'vertical' }} value={form.defects}
-              onChange={e => set('defects', e.target.value)} placeholder="Describe los defectos..." />
-          </Field>
-          {form.result === 'desfavorable' && initial && (
-            <Field label="¿Reparado y pasado?">
-              <div style={{ display: 'flex', gap: 8 }}>
-                {[false, true].map(v => (
-                  <button key={String(v)} onClick={() => set('resolved', v)} style={{
-                    ...css.btn(form.resolved === v ? (v ? theme.green : theme.bg) : theme.bg, form.resolved === v ? (v ? '#000' : theme.muted) : theme.muted),
-                    flex: 1, justifyContent: 'center', border: `1px solid ${theme.border}`,
-                  }}>{v ? '✅ Sí, reparado' : '⏳ Pendiente'}</button>
-                ))}
-              </div>
-            </Field>
-          )}
-        </>
+        <Field label="Defectos encontrados">
+          <textarea style={{ ...css.input, minHeight: 70, resize: 'vertical' }} value={form.defects}
+            onChange={e => set('defects', e.target.value)} placeholder="Describe los defectos..." />
+        </Field>
+      )}
+
+      {form.result === 'desfavorable' && (
+        <Field label="¿Reparado y pasado?">
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" onClick={() => set('resolved', false)} style={{
+              ...css.btn(!form.resolved ? theme.accent : theme.bg, !form.resolved ? '#000' : theme.muted),
+              flex: 1, justifyContent: 'center', border: `1px solid ${theme.border}`,
+            }}>⏳ Pendiente</button>
+            <button type="button" onClick={() => set('resolved', true)} style={{
+              ...css.btn(form.resolved ? theme.green : theme.bg, form.resolved ? '#000' : theme.muted),
+              flex: 1, justifyContent: 'center', border: `1px solid ${theme.border}`,
+            }}>✅ Reparado</button>
+          </div>
+        </Field>
       )}
 
       <ResponsiveGrid2>
-        <Field label="Estación ITV"><input style={css.input} value={form.station} onChange={e => set('station', e.target.value)} placeholder="Nombre estación" /></Field>
-        <Field label="Coste (€)"><input style={css.input} type="number" value={form.cost} onChange={e => set('cost', +e.target.value)} /></Field>
+        <Field label="Estación ITV">
+          <input style={css.input} value={form.station} onChange={e => set('station', e.target.value)} placeholder="Nombre estación" />
+        </Field>
+        <Field label="Coste (€)">
+          <input style={css.input} type="number" value={form.cost} onChange={e => set('cost', +e.target.value)} />
+        </Field>
       </ResponsiveGrid2>
-      <Field label="Notas"><input style={css.input} value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Observaciones..." /></Field>
+      <Field label="Notas">
+        <input style={css.input} value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Observaciones..." />
+      </Field>
 
       <div style={{ ...css.flex, justifyContent: 'flex-end', marginTop: 8, gap: 8 }}>
         <button onClick={onClose} style={css.btnOutline}>Cancelar</button>
-        <button onClick={handleSave} disabled={saving} style={css.btn()}><Save size={14} /> {saving ? 'Guardando...' : 'Guardar'}</button>
+        <button onClick={handleSave} disabled={saving} style={css.btn()}>
+          <Save size={14} /> {saving ? 'Guardando...' : 'Guardar'}
+        </button>
       </div>
     </Modal>
   )
@@ -112,27 +145,49 @@ export default function ItvCard({ carId, itvRecords, onReload, onToast, isMobile
   const itvStatus = getItvStatus(latest)
   const isAlert = ['expired', 'failed', 'defects', 'soon'].includes(itvStatus.status)
 
+  const openEdit = (record) => {
+    setEditRecord(record)
+    setShowForm(true)
+  }
+
+  const openNew = () => {
+    setEditRecord(null)
+    setShowForm(true)
+  }
+
   const handleSave = async (form) => {
     try {
       if (editRecord) {
-        await updateItvRecord(editRecord.id, form)
+        await updateItvRecord(editRecord.id, {
+          inspection_date: form.inspection_date,
+          expiry_date: form.expiry_date || null,
+          result: form.result,
+          station: form.station,
+          defects: form.defects,
+          cost: form.cost,
+          notes: form.notes,
+          resolved: form.resolved,
+        })
         onToast('ITV actualizada')
       } else {
         await createItvRecord({ car_id: carId, ...form })
         onToast('ITV registrada')
       }
-      setShowForm(false); setEditRecord(null); onReload()
+      setShowForm(false)
+      setEditRecord(null)
+      onReload()
     } catch (err) { onToast('Error: ' + err.message, 'error') }
   }
 
   const handleDelete = async (id) => {
+    if (!confirm('¿Eliminar este registro de ITV?')) return
     try { await deleteItvRecord(id); onToast('Registro eliminado'); onReload() }
     catch (err) { onToast('Error: ' + err.message, 'error') }
   }
 
   const StatusIcon = itvStatus.status === 'valid' || itvStatus.status === 'approaching'
     ? ShieldCheck : itvStatus.status === 'failed' || itvStatus.status === 'expired'
-    ? ShieldX : itvStatus.status === 'none' ? ShieldAlert : ShieldAlert
+    ? ShieldX : ShieldAlert
 
   return (
     <>
@@ -141,7 +196,7 @@ export default function ItvCard({ carId, itvRecords, onReload, onToast, isMobile
         border: isAlert ? `1px solid ${itvStatus.color}40` : `1px solid ${theme.border}`,
         background: isAlert ? `${itvStatus.color}08` : theme.card,
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: 12, flexDirection: isMobile ? 'column' : 'row' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ background: `${itvStatus.color}18`, borderRadius: 10, padding: 10, display: 'flex' }}>
               <StatusIcon size={22} color={itvStatus.color} />
@@ -153,30 +208,31 @@ export default function ItvCard({ carId, itvRecords, onReload, onToast, isMobile
               </div>
               {latest && (
                 <div style={{ fontSize: 12, color: theme.muted, marginTop: 4 }}>
-                  Última: {latest.inspection_date} · {RESULTS.find(r => r.value === latest.result)?.label}
+                  Inspección: {formatDate(latest.inspection_date)} · {RESULTS.find(r => r.value === latest.result)?.label}
                   {latest.station ? ` · ${latest.station}` : ''}
-                  {latest.defects && <span style={{ color: theme.yellow }}> · Defectos: {latest.defects}</span>}
+                  {latest.cost ? ` · ${latest.cost}€` : ''}
+                  {latest.defects && <span style={{ color: theme.yellow }}> · {latest.defects}</span>}
                 </div>
               )}
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 6 }}>
+          <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
             {latest && (
-              <button onClick={() => { setEditRecord(latest); setShowForm(true) }}
-                style={css.btnSm(theme.accentSoft, theme.accent)}><Edit2 size={12} /></button>
+              <button onClick={() => openEdit(latest)} style={css.btnSm(theme.accentSoft, theme.accent)}>
+                <Edit2 size={12} /> {isMobile ? '' : 'Editar'}
+              </button>
             )}
-            <button onClick={() => { setEditRecord(null); setShowForm(true) }}
-              style={css.btnSm(theme.accent, '#000')}><Plus size={12} /> {isMobile ? '' : 'Nueva'}</button>
+            <button onClick={openNew} style={css.btnSm(theme.accent, '#000')}>
+              <Plus size={12} /> {isMobile ? '' : 'Nueva'}
+            </button>
             {itvRecords.length > 1 && (
-              <button onClick={() => setShowHistory(!showHistory)}
-                style={css.btnSm(theme.bg, theme.muted)}>
-                <Calendar size={12} /> {isMobile ? '' : 'Historial'}
+              <button onClick={() => setShowHistory(!showHistory)} style={css.btnSm(theme.bg, theme.muted)}>
+                <Calendar size={12} />
               </button>
             )}
           </div>
         </div>
 
-        {/* History */}
         {showHistory && itvRecords.length > 1 && (
           <div style={{ marginTop: 12, borderTop: `1px solid ${theme.border}`, paddingTop: 12 }}>
             {itvRecords.slice(1).map(r => {
@@ -184,12 +240,15 @@ export default function ItvCard({ carId, itvRecords, onReload, onToast, isMobile
               return (
                 <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: `1px solid ${theme.border}` }}>
                   <div style={{ fontSize: 12 }}>
-                    <span style={{ color: theme.muted }}>{r.inspection_date}</span>
+                    <span style={{ color: theme.muted }}>{formatDate(r.inspection_date)}</span>
                     <span style={{ color: res?.color, fontWeight: 600, marginLeft: 8 }}>{res?.label}</span>
                     {r.station && <span style={{ color: theme.mutedLight, marginLeft: 8 }}>{r.station}</span>}
                     {r.defects && <span style={{ color: theme.yellow, marginLeft: 8 }}>{r.defects}</span>}
                   </div>
-                  <button onClick={() => handleDelete(r.id)} style={css.btnSm(theme.redSoft, theme.red)}><Trash2 size={11} /></button>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <button onClick={() => openEdit(r)} style={css.btnSm(theme.accentSoft, theme.accent)}><Edit2 size={11} /></button>
+                    <button onClick={() => handleDelete(r.id)} style={css.btnSm(theme.redSoft, theme.red)}><Trash2 size={11} /></button>
+                  </div>
                 </div>
               )
             })}
@@ -197,18 +256,13 @@ export default function ItvCard({ carId, itvRecords, onReload, onToast, isMobile
         )}
       </div>
 
-      {showForm && (
-        <ItvFormModal
-          open={showForm}
-          onClose={() => { setShowForm(false); setEditRecord(null) }}
-          onSave={handleSave}
-          initial={editRecord ? {
-            inspection_date: editRecord.inspection_date, expiry_date: editRecord.expiry_date,
-            result: editRecord.result, station: editRecord.station || '', defects: editRecord.defects || '',
-            cost: editRecord.cost || 0, notes: editRecord.notes || '', resolved: editRecord.resolved || false,
-          } : null}
-        />
-      )}
+      <ItvFormModal
+        open={showForm}
+        onClose={() => { setShowForm(false); setEditRecord(null) }}
+        onSave={handleSave}
+        initial={editRecord}
+        isEditing={!!editRecord}
+      />
     </>
   )
 }

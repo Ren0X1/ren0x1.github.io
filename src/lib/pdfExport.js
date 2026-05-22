@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { MAINT_TYPES, getMaintStatus } from '../lib/constants.js'
+import { MAINT_TYPES, getMaintStatus, formatDate } from '../lib/constants.js'
 
 export function exportCarPdf({ car, maintenance, kmLogs, fuelLogs, parts }) {
   const doc = new jsPDF()
@@ -41,9 +41,9 @@ export function exportCarPdf({ car, maintenance, kmLogs, fuelLogs, parts }) {
       mt.name,
       statusText,
       m ? m.last_km?.toLocaleString() + ' km' : '—',
-      m?.last_date || '—',
+      formatDate(m?.last_date),
       m ? m.next_km?.toLocaleString() + ' km' : '—',
-      m?.next_date || '—',
+      formatDate(m?.next_date),
       m?.cost ? m.cost + '€' : '—',
     ]
   })
@@ -105,7 +105,7 @@ export function exportCarPdf({ car, maintenance, kmLogs, fuelLogs, parts }) {
       startY: y,
       head: [['Fecha', 'Km', 'Litros', '€/L', 'Total', 'Lleno', 'Notas']],
       body: fuelLogs.map(l => [
-        l.date, l.km?.toLocaleString(), l.liters + 'L', l.price_liter + '€',
+        formatDate(l.date), l.km?.toLocaleString(), l.liters + 'L', l.price_liter + '€',
         (l.total_cost || 0).toFixed(2) + '€', l.full_tank ? 'Sí' : 'No', l.notes || '',
       ]),
       foot: [['', '', '', 'TOTAL:', totalFuel.toFixed(2) + '€', '', '']],
@@ -129,7 +129,7 @@ export function exportCarPdf({ car, maintenance, kmLogs, fuelLogs, parts }) {
     autoTable(doc, {
       startY: y,
       head: [['Fecha', 'Kilómetros', 'Notas']],
-      body: kmLogs.map(l => [l.date, l.km?.toLocaleString() + ' km', l.notes || '—']),
+      body: kmLogs.map(l => [formatDate(l.date), l.km?.toLocaleString() + ' km', l.notes || '—']),
       theme: 'grid',
       headStyles: { fillColor: [139, 92, 246], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
       bodyStyles: { fontSize: 8, textColor: [60, 60, 60] },

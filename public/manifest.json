@@ -1,7 +1,7 @@
 {
   "name": "Pibes Mecánicos",
   "short_name": "Pibes Mec.",
-  "description": "Control de mantenimiento de vehículos",
+  "description": "El taller de los pibes",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#161616",

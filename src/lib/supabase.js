@@ -253,6 +253,17 @@ export async function deleteWorkshop(id) {
   if (error) throw error
 }
 
+export async function updateWorkshop(id, updates) {
+  const { data, error } = await supabase
+    .from('workshops')
+    .update(updates)
+    .eq('id', id)
+    .select('*, profiles(name)')
+    .single()
+  if (error) throw error
+  return data
+}
+
 // ─── Expense helpers ───
 
 export async function getAllExpenses(carId) {
@@ -319,7 +330,6 @@ export async function createGroup(name, createdBy) {
     .select()
     .single()
   if (error) throw error
-  // Auto-add creator as member
   await supabase.from('group_members').insert({ group_id: data.id, user_id: createdBy })
   return data
 }
@@ -357,8 +367,6 @@ export async function removeGroupMember(groupId, userId) {
   if (error) throw error
 }
 
-// ─── Group Messages ───
-
 export async function getGroupMessages(groupId) {
   const { data, error } = await supabase
     .from('group_messages')
@@ -379,8 +387,6 @@ export async function sendGroupMessage(groupId, userId, message) {
   if (error) throw error
   return data
 }
-
-// ─── Member Cars (read-only) ───
 
 export async function getMemberCars(userId) {
   const { data, error } = await supabase

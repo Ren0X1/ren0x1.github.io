@@ -5,7 +5,7 @@ import { useIsMobile } from '../lib/useIsMobile.js'
 export default function Nav({ user, view, setView, onLogout }) {
   const m = useIsMobile()
   const tabs = [
-    { id: 'dashboard', icon: <Car size={16} />, label: 'Mis Coches' },
+    { id: 'dashboard', icon: <Car size={16} />, label: 'Coches' },
     { id: 'groups', icon: <Users size={16} />, label: 'Grupos' },
     { id: 'workshops', icon: <Wrench size={16} />, label: 'Talleres' },
     ...(user.role === 'admin' ? [{ id: 'admin', icon: <Shield size={16} />, label: 'Admin' }] : []),

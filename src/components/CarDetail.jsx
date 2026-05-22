@@ -11,7 +11,7 @@ import {
   deleteMaintenanceRecord, getKmLogs, createKmLog, deleteKmLog,
   getCarParts, createCarPart, deleteCarPart, getFuelLogs, getItvRecords
 } from '../lib/supabase.js'
-import { MAINT_TYPES, FUEL_TYPES, TRANS_TYPES, getMaintStatus } from '../lib/constants.js'
+import { MAINT_TYPES, FUEL_TYPES, TRANS_TYPES, getMaintStatus, formatDate } from '../lib/constants.js'
 import { Modal, Field, Stat, StatusBadge, Loader, ResponsiveGrid2 } from './ui.jsx'
 import FuelTab from './FuelTab.jsx'
 import ExpenseTab from './ExpenseTab.jsx'
@@ -59,9 +59,9 @@ function MaintCard({ mt, record, currentKm, onEdit, onDelete }) {
       {record && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, fontSize: 12, color: theme.muted }}>
           <span>Último: {record.last_km?.toLocaleString()} km</span>
-          <span>Fecha: {record.last_date || '—'}</span>
+          <span>Fecha: {formatDate(record.last_date) || '—'}</span>
           <span style={{ fontWeight: 600, color: theme.text }}>Próximo: {record.next_km?.toLocaleString()} km</span>
-          <span>Fecha: {record.next_date || '—'}</span>
+          <span>Fecha: {formatDate(record.next_date) || '—'}</span>
         </div>
       )}
       <div style={{ display: 'flex', gap: 4, marginTop: 8, justifyContent: 'flex-end' }}>
@@ -413,9 +413,9 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
                         <td style={{ ...css.td, fontWeight: 600 }}>{mt.emoji} {mt.name}</td>
                         <td style={css.td}>{status ? <StatusBadge status={status} /> : <span style={{ color: theme.mutedLight, fontSize: 12 }}>Sin datos</span>}</td>
                         <td style={{ ...css.td, color: theme.muted }}>{m ? m.last_km.toLocaleString() : '—'}</td>
-                        <td style={{ ...css.td, color: theme.muted }}>{m?.last_date || '—'}</td>
+                        <td style={{ ...css.td, color: theme.muted }}>{formatDate(m?.last_date)}</td>
                         <td style={{ ...css.td, fontWeight: 600 }}>{m ? m.next_km.toLocaleString() : '—'}</td>
-                        <td style={{ ...css.td, color: theme.muted }}>{m?.next_date || '—'}</td>
+                        <td style={{ ...css.td, color: theme.muted }}>{formatDate(m?.next_date)}</td>
                         <td style={{ ...css.td, color: theme.muted }}>{m?.cost ? `${m.cost}€` : '—'}</td>
                         <td style={css.td}>
                           <div style={{ display: 'flex', gap: 4 }}>
@@ -462,7 +462,7 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
                 <tbody>
                   {kmLogs.map(l => (
                     <tr key={l.id} style={{ borderBottom: `1px solid ${theme.border}` }}>
-                      <td style={{ ...css.td, fontSize: mob ? 12 : 13 }}>{l.date}</td>
+                      <td style={{ ...css.td, fontSize: mob ? 12 : 13 }}>{formatDate(l.date)}</td>
                       <td style={{ ...css.td, fontWeight: 700 }}>{l.km.toLocaleString()} km</td>
                       <td style={{ ...css.td, color: theme.muted, fontSize: mob ? 12 : 13 }}>{l.notes || '—'}</td>
                       <td style={css.td}>

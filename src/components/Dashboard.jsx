@@ -6,7 +6,7 @@ import {
 import { theme, css } from '../lib/theme.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
 import { getCars, createCar, deleteCar, getMaintenanceRecords, getCarParts, getItvRecords } from '../lib/supabase.js'
-import { FUEL_TYPES, TRANS_TYPES, getMaintStatus } from '../lib/constants.js'
+import { FUEL_TYPES, TRANS_TYPES, getMaintStatus, formatDate } from '../lib/constants.js'
 import { Modal, Field, Loader, ResponsiveGrid2 } from './ui.jsx'
 import CarDetail from './CarDetail.jsx'
 
@@ -126,14 +126,12 @@ export default function Dashboard({ user, onToast }) {
               const mt = carMeta[car.id] || { maint: [], partsCount: 0, itv: null }
               let overdue = 0, warn = 0
               mt.maint.forEach(r => { const s = getMaintStatus(r, car.current_km); if (s === 'overdue') overdue++; if (s === 'warn') warn++ })
-              // ITV status
               let itvBadge = null
               if (mt.itv) {
-                const exp = new Date(mt.itv.expiry_date)
-                const dLeft = Math.floor((exp - new Date()) / 86400000)
+                const dLeft = mt.itv.expiry_date ? Math.floor((new Date(mt.itv.expiry_date) - new Date()) / 86400000) : null
                 if (mt.itv.result === 'negativa') itvBadge = { bg: theme.redSoft, color: theme.red, text: 'ITV ✗' }
-                else if (dLeft < 0) itvBadge = { bg: theme.redSoft, color: theme.red, text: 'ITV caducada' }
-                else if (dLeft <= 30) itvBadge = { bg: theme.yellowSoft, color: theme.yellow, text: `ITV ${dLeft}d` }
+                else if (dLeft !== null && dLeft < 0) itvBadge = { bg: theme.redSoft, color: theme.red, text: 'ITV caducada' }
+                else if (dLeft !== null && dLeft <= 30) itvBadge = { bg: theme.yellowSoft, color: theme.yellow, text: `ITV ${dLeft}d` }
               }
               return (
                 <div key={car.id} onClick={() => setSelectedCarId(car.id)}
