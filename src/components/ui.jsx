@@ -101,25 +101,32 @@ export function DateInput({ value, onChange, style: s, ...props }) {
     }
   }
 
-  return <input type="text" inputMode="numeric" placeholder="DD/MM/AAAA"
+  return <input type="text" inputMode="numeric" pattern="[0-9/]*" placeholder="DD/MM/AAAA"
     value={text} onChange={handleChange} style={{ ...css.input, ...s }} {...props} />
 }
 
-export function NumInput({ value, onChange, step, style: s, ...props }) {
+export function NumInput({ value, onChange, step, decimal, style: s, ...props }) {
   const [text, setText] = useState(value != null && value !== 0 ? String(value) : '')
 
   useEffect(() => {
     setText(value != null && value !== 0 ? String(value) : '')
   }, [value])
 
+  const isDecimal = decimal || (step && parseFloat(step) < 1)
+
   const handleChange = (e) => {
-    const v = e.target.value
+    // Allow digits, one dot, and one minus at start
+    let v = e.target.value
+    if (!isDecimal) v = v.replace(/[^\d]/g, '')
+    else v = v.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1')
     setText(v)
     const num = v === '' ? 0 : parseFloat(v)
     if (!isNaN(num)) onChange({ target: { value: num } })
   }
 
-  return <input type="number" step={step} value={text} onChange={handleChange}
+  return <input type="text" inputMode={isDecimal ? 'decimal' : 'numeric'}
+    pattern={isDecimal ? '[0-9.]*' : '[0-9]*'}
+    value={text} onChange={handleChange}
     onFocus={e => { if (e.target.value === '0') { setText(''); } }}
     placeholder="0" style={{ ...css.input, ...s }} {...props} />
 }

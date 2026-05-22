@@ -51,8 +51,11 @@ export default function Login({ onLogin }) {
               <input
                 style={{ ...css.input, paddingRight: 40 }}
                 type={showPin ? 'text' : 'password'}
+                inputMode="numeric"
+                pattern="[0-9]*"
+                autoComplete="one-time-code"
                 value={pin}
-                onChange={e => { setPin(e.target.value); setError('') }}
+                onChange={e => { setPin(e.target.value.replace(/[^\d]/g, '')); setError('') }}
                 placeholder="••••"
                 onKeyDown={e => e.key === 'Enter' && handleLogin()}
               />

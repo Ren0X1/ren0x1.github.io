@@ -90,7 +90,7 @@ export default function AdminPanel({ onToast }) {
         <Modal open={showNew} onClose={() => setShowNew(false)} title="Nuevo Usuario">
           <Field label="Nombre"><input style={css.input} value={newUser.name} onChange={e => setNewUser(p => ({ ...p, name: e.target.value }))} placeholder="Nombre" /></Field>
           <Field label="Usuario"><input style={css.input} value={newUser.username} onChange={e => setNewUser(p => ({ ...p, username: e.target.value }))} placeholder="nombre_usuario" /></Field>
-          <Field label="PIN"><input style={css.input} value={newUser.pin} onChange={e => setNewUser(p => ({ ...p, pin: e.target.value }))} placeholder="1234" /></Field>
+          <Field label="PIN"><input style={css.input} inputMode="numeric" pattern="[0-9]*" value={newUser.pin} onChange={e => setNewUser(p => ({ ...p, pin: e.target.value.replace(/[^\d]/g, '') }))} placeholder="1234" /></Field>
           <div style={{ ...css.flex, justifyContent: 'flex-end', marginTop: 16, gap: 8 }}>
             <button onClick={() => setShowNew(false)} style={css.btnOutline}>Cancelar</button>
             <button onClick={handleAdd} disabled={saving} style={css.btn()}><Save size={14} /> {saving ? 'Creando...' : 'Crear'}</button>
