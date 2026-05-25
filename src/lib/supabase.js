@@ -50,6 +50,17 @@ export async function createProfile({ name, username, pin, role = 'user' }) {
   return data
 }
 
+export async function updateProfile(id, updates) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
 export async function deleteProfile(id) {
   const { error } = await supabase.from('profiles').delete().eq('id', id)
   if (error) throw error

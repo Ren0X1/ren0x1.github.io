@@ -1,101 +1,261 @@
-import { useState, useEffect } from 'react'
-import { Plus, Trash2, Save } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { Plus, Trash2, Save, Users, Car, Key, BarChart3, ShieldCheck } from 'lucide-react'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { theme, css } from '../lib/theme.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
-import { getProfiles, createProfile, deleteProfile, getCars } from '../lib/supabase.js'
-import { Modal, Field, Loader } from './ui.jsx'
+import { getProfiles, createProfile, deleteProfile, updateProfile, getCars, getMaintenanceRecords } from '../lib/supabase.js'
+import { getMaintStatus } from '../lib/constants.js'
+import { Modal, Field, Loader, Stat } from './ui.jsx'
+
+const COLORS = ['#f59e0b', '#3b82f6', '#22c55e', '#ef4444', '#8b5cf6']
+
+const CustomTooltip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null
+  return (
+    <div style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 8, padding: '8px 12px', fontSize: 12 }}>
+      <div style={{ fontWeight: 700, marginBottom: 2, color: theme.text }}>{label}</div>
+      {payload.map((p, i) => <div key={i} style={{ color: p.color }}>{p.name}: {p.value}</div>)}
+    </div>
+  )
+}
 
 export default function AdminPanel({ onToast }) {
   const mob = useIsMobile()
   const [users, setUsers] = useState([])
-  const [carCounts, setCarCounts] = useState({})
+  const [allCars, setAllCars] = useState([])
+  const [allMaint, setAllMaint] = useState([])
   const [loading, setLoading] = useState(true)
   const [showNew, setShowNew] = useState(false)
   const [newUser, setNewUser] = useState({ name: '', username: '', pin: '1234', role: 'user' })
   const [saving, setSaving] = useState(false)
+  const [tab, setTab] = useState('users')
 
-  const loadUsers = async () => {
+  const loadAll = async () => {
     try {
       const profiles = await getProfiles()
       setUsers(profiles)
-      const counts = {}
-      for (const p of profiles) { const cars = await getCars(p.id); counts[p.id] = cars.length }
-      setCarCounts(counts)
-    } catch (err) { onToast('Error cargando usuarios: ' + err.message, 'error') }
+      const cars = []
+      const maints = []
+      for (const p of profiles) {
+        const c = await getCars(p.id)
+        cars.push(...c.map(car => ({ ...car, ownerName: p.name })))
+        for (const car of c) {
+          const m = await getMaintenanceRecords(car.id)
+          maints.push(...m.map(r => ({ ...r, carName: `${car.brand} ${car.model}`, currentKm: car.current_km })))
+        }
+      }
+      setAllCars(cars)
+      setAllMaint(maints)
+    } catch (err) { onToast('Error: ' + err.message, 'error') }
     finally { setLoading(false) }
   }
 
-  useEffect(() => { loadUsers() }, [])
+  useEffect(() => { loadAll() }, [])
 
   const handleAdd = async () => {
     if (!newUser.name || !newUser.username) return
     setSaving(true)
     try {
-      await createProfile(newUser)
+      await createProfile({ ...newUser, pin_change_required: true })
       setNewUser({ name: '', username: '', pin: '1234', role: 'user' })
-      setShowNew(false)
-      onToast('Usuario creado correctamente')
-      loadUsers()
+      setShowNew(false); onToast('Usuario creado — se le pedirá cambiar el PIN'); loadAll()
     } catch (err) { onToast('Error: ' + err.message, 'error') }
     finally { setSaving(false) }
   }
 
   const handleDelete = async (id, name) => {
-    if (!confirm(`¿Eliminar al usuario "${name}" y todos sus datos?`)) return
-    try { await deleteProfile(id); onToast('Usuario eliminado'); loadUsers() }
+    if (!confirm(`¿Eliminar al usuario "${name}"?`)) return
+    try { await deleteProfile(id); onToast('Usuario eliminado'); loadAll() }
     catch (err) { onToast('Error: ' + err.message, 'error') }
   }
 
-  if (loading) return <Loader text="Cargando usuarios..." />
+  const handleForcePin = async (id, name) => {
+    if (!confirm(`¿Forzar cambio de PIN para "${name}"?`)) return
+    try { await updateProfile(id, { pin_change_required: true }); onToast(`Se pedirá a ${name} que cambie su PIN`); loadAll() }
+    catch (err) { onToast('Error: ' + err.message, 'error') }
+  }
+
+  // Stats
+  const stats = useMemo(() => {
+    const totalKm = allCars.reduce((s, c) => s + (c.current_km || 0), 0)
+    let ok = 0, warn = 0, overdue = 0
+    allMaint.forEach(m => { const s = getMaintStatus(m, m.currentKm); if (s === 'ok') ok++; else if (s === 'warn') warn++; else if (s === 'overdue') overdue++ })
+
+    const carsPerUser = users.map(u => ({ name: u.name, count: allCars.filter(c => c.user_id === u.id).length }))
+    const vehicleTypes = [
+      { name: 'Coches', value: allCars.filter(c => c.vehicle_type !== 'moto').length },
+      { name: 'Motos', value: allCars.filter(c => c.vehicle_type === 'moto').length },
+    ].filter(v => v.value > 0)
+
+    return { totalKm, ok, warn, overdue, total: ok + warn + overdue, carsPerUser, vehicleTypes }
+  }, [users, allCars, allMaint])
+
+  if (loading) return <Loader text="Cargando panel..." />
+
+  const tabs = [
+    { id: 'users', icon: <Users size={14} />, label: 'Usuarios' },
+    { id: 'stats', icon: <BarChart3 size={14} />, label: 'Estadísticas' },
+  ]
 
   return (
     <div style={css.container}>
       <div style={{ paddingTop: mob ? 20 : 28, paddingBottom: 40 }}>
-        <div style={{ ...css.flexBetween, marginBottom: 20, gap: 12 }}>
-          <div>
-            <h1 style={{ ...css.h1, fontSize: mob ? 22 : 26 }}>Administración</h1>
-            <p style={css.subtitle}>{users.length} usuario{users.length !== 1 ? 's' : ''}</p>
-          </div>
-          <button onClick={() => setShowNew(true)} style={css.btn()}>
-            <Plus size={16} /> {mob ? 'Nuevo' : 'Nuevo Usuario'}
-          </button>
-        </div>
+        <h1 style={{ ...css.h1, fontSize: mob ? 22 : 26, marginBottom: 20 }}>Administración</h1>
 
-        <div style={{ display: 'grid', gap: 10 }}>
-          {users.map(u => (
-            <div key={u.id} style={{ ...css.card, padding: mob ? 14 : 20 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-                    <h3 style={css.h3}>{u.name}</h3>
-                    <span style={css.badge(
-                      u.role === 'admin' ? theme.accentSoft : theme.greenSoft,
-                      u.role === 'admin' ? theme.accent : theme.green
-                    )}>{u.role === 'admin' ? 'Admin' : 'Usuario'}</span>
-                  </div>
-                  <p style={{ ...css.subtitle, marginTop: 4 }}>
-                    @{u.username} · PIN: {u.pin} · {carCounts[u.id] || 0} coche{(carCounts[u.id] || 0) !== 1 ? 's' : ''}
-                  </p>
-                </div>
-                {u.role !== 'admin' && (
-                  <button onClick={() => handleDelete(u.id, u.name)} style={css.btnSm(theme.redSoft, theme.red)}>
-                    <Trash2 size={12} /> {mob ? '' : 'Eliminar'}
-                  </button>
-                )}
-              </div>
-            </div>
+        {/* Tabs */}
+        <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: theme.bg, borderRadius: 10, padding: 4 }}>
+          {tabs.map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)} style={{
+              display: 'flex', alignItems: 'center', gap: 5, flex: 1, justifyContent: 'center',
+              background: tab === t.id ? theme.card : 'transparent', color: tab === t.id ? theme.text : theme.muted,
+              border: tab === t.id ? `1px solid ${theme.border}` : '1px solid transparent',
+              borderRadius: 8, padding: '8px 12px', cursor: 'pointer', fontWeight: 600, fontSize: 13, fontFamily: 'inherit',
+            }}>{t.icon} {t.label}</button>
           ))}
         </div>
 
-        <Modal open={showNew} onClose={() => setShowNew(false)} title="Nuevo Usuario">
-          <Field label="Nombre"><input style={css.input} value={newUser.name} onChange={e => setNewUser(p => ({ ...p, name: e.target.value }))} placeholder="Nombre" /></Field>
-          <Field label="Usuario"><input style={css.input} value={newUser.username} onChange={e => setNewUser(p => ({ ...p, username: e.target.value }))} placeholder="nombre_usuario" /></Field>
-          <Field label="PIN"><input style={css.input} inputMode="numeric" pattern="[0-9]*" value={newUser.pin} onChange={e => setNewUser(p => ({ ...p, pin: e.target.value.replace(/[^\d]/g, '') }))} placeholder="1234" /></Field>
-          <div style={{ ...css.flex, justifyContent: 'flex-end', marginTop: 16, gap: 8 }}>
-            <button onClick={() => setShowNew(false)} style={css.btnOutline}>Cancelar</button>
-            <button onClick={handleAdd} disabled={saving} style={css.btn()}><Save size={14} /> {saving ? 'Creando...' : 'Crear'}</button>
-          </div>
-        </Modal>
+        {tab === 'users' && (
+          <>
+            <div style={{ ...css.flexBetween, marginBottom: 16, gap: 12 }}>
+              <p style={css.subtitle}>{users.length} usuario{users.length !== 1 ? 's' : ''}</p>
+              <button onClick={() => setShowNew(true)} style={css.btn()}><Plus size={16} /> {mob ? 'Nuevo' : 'Nuevo Usuario'}</button>
+            </div>
+            <div style={{ display: 'grid', gap: 10 }}>
+              {users.map(u => {
+                const uCars = allCars.filter(c => c.user_id === u.id)
+                return (
+                  <div key={u.id} style={{ ...css.card, padding: mob ? 14 : 20 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+                          <span style={{ fontWeight: 700, fontSize: 15, color: theme.text }}>{u.name}</span>
+                          <span style={css.badge(u.role === 'admin' ? theme.accentSoft : theme.greenSoft, u.role === 'admin' ? theme.accent : theme.green)}>
+                            {u.role === 'admin' ? 'Admin' : 'Usuario'}
+                          </span>
+                          {u.pin_change_required && <span style={css.badge(theme.yellowSoft, theme.yellow)}>PIN pendiente</span>}
+                        </div>
+                        <p style={{ fontSize: 12, color: theme.muted }}>
+                          @{u.username} · {uCars.length} vehículo{uCars.length !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                      {u.role !== 'admin' && (
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button onClick={() => handleForcePin(u.id, u.name)} title="Forzar cambio de PIN"
+                            style={css.btnSm(theme.yellowSoft, theme.yellow)}><Key size={12} /></button>
+                          <button onClick={() => handleDelete(u.id, u.name)}
+                            style={css.btnSm(theme.redSoft, theme.red)}><Trash2 size={12} /></button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            <Modal open={showNew} onClose={() => setShowNew(false)} title="Nuevo Usuario">
+              <p style={{ ...css.subtitle, marginBottom: 16 }}>Se le pedirá cambiar el PIN en su primer inicio de sesión.</p>
+              <Field label="Nombre"><input style={css.input} value={newUser.name} onChange={e => setNewUser(p => ({ ...p, name: e.target.value }))} placeholder="Nombre" /></Field>
+              <Field label="Usuario"><input style={css.input} value={newUser.username} onChange={e => setNewUser(p => ({ ...p, username: e.target.value }))} placeholder="nombre_usuario" /></Field>
+              <Field label="PIN temporal"><input style={css.input} inputMode="numeric" pattern="[0-9]*" value={newUser.pin} onChange={e => setNewUser(p => ({ ...p, pin: e.target.value.replace(/[^\d]/g, '') }))} placeholder="1234" /></Field>
+              <div style={{ ...css.flex, justifyContent: 'flex-end', marginTop: 16, gap: 8 }}>
+                <button onClick={() => setShowNew(false)} style={css.btnOutline}>Cancelar</button>
+                <button onClick={handleAdd} disabled={saving} style={css.btn()}><Save size={14} /> {saving ? 'Creando...' : 'Crear'}</button>
+              </div>
+            </Modal>
+          </>
+        )}
+
+        {tab === 'stats' && (
+          <>
+            {/* Summary stats */}
+            <div style={{ display: 'grid', gridTemplateColumns: mob ? '1fr 1fr' : 'repeat(4, 1fr)', gap: mob ? 8 : 12, marginBottom: 20 }}>
+              <Stat icon={<Users size={18} color={theme.accent} />} label="Usuarios" value={users.length} />
+              <Stat icon={<Car size={18} color="#3b82f6" />} label="Vehículos" value={allCars.length} color="#3b82f6" />
+              <Stat icon={<ShieldCheck size={18} color={theme.green} />} label="Mant. OK" value={stats.ok} color={theme.green} />
+              <Stat icon={<BarChart3 size={18} color={theme.red} />} label="Mant. vencidos" value={stats.overdue} color={theme.red} />
+            </div>
+
+            {/* Cars per user chart */}
+            {stats.carsPerUser.length > 0 && (
+              <div style={{ ...css.card, padding: mob ? 12 : 20, marginBottom: 12 }}>
+                <h3 style={{ ...css.h3, marginBottom: 16 }}>Vehículos por usuario</h3>
+                <div style={{ width: '100%', height: 200 }}>
+                  <ResponsiveContainer>
+                    <BarChart data={stats.carsPerUser} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                      <XAxis dataKey="name" tick={{ fill: theme.muted, fontSize: 12 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: theme.muted, fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Bar dataKey="count" name="Vehículos" fill={theme.accent} radius={[6, 6, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+
+            {/* Vehicle types + maintenance status */}
+            <div style={{ display: 'grid', gridTemplateColumns: mob ? '1fr' : '1fr 1fr', gap: 12 }}>
+              {stats.vehicleTypes.length > 0 && (
+                <div style={{ ...css.card, padding: mob ? 12 : 20 }}>
+                  <h3 style={{ ...css.h3, marginBottom: 16 }}>Tipos de vehículo</h3>
+                  <div style={{ width: '100%', height: 180 }}>
+                    <ResponsiveContainer>
+                      <PieChart>
+                        <Pie data={stats.vehicleTypes} cx="50%" cy="50%" outerRadius={70} innerRadius={40} dataKey="value" stroke="none">
+                          {stats.vehicleTypes.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
+                        </Pie>
+                        <Tooltip content={<CustomTooltip />} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 4 }}>
+                    {stats.vehicleTypes.map((v, i) => (
+                      <span key={v.name} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: theme.muted }}>
+                        <span style={{ width: 10, height: 10, borderRadius: 2, background: COLORS[i], display: 'inline-block' }} />
+                        {v.name}: {v.value}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {stats.total > 0 && (
+                <div style={{ ...css.card, padding: mob ? 12 : 20 }}>
+                  <h3 style={{ ...css.h3, marginBottom: 16 }}>Estado mantenimientos</h3>
+                  <div style={{ width: '100%', height: 180 }}>
+                    <ResponsiveContainer>
+                      <PieChart>
+                        <Pie data={[
+                          { name: 'Al día', value: stats.ok },
+                          { name: 'Próximos', value: stats.warn },
+                          { name: 'Vencidos', value: stats.overdue },
+                        ].filter(v => v.value > 0)} cx="50%" cy="50%" outerRadius={70} innerRadius={40} dataKey="value" stroke="none">
+                          <Cell fill={theme.green} />
+                          <Cell fill={theme.yellow} />
+                          <Cell fill={theme.red} />
+                        </Pie>
+                        <Tooltip content={<CustomTooltip />} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 4 }}>
+                    {[{ l: 'OK', c: theme.green, v: stats.ok }, { l: 'Próx.', c: theme.yellow, v: stats.warn }, { l: 'Venc.', c: theme.red, v: stats.overdue }].map(x => (
+                      <span key={x.l} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: theme.muted }}>
+                        <span style={{ width: 10, height: 10, borderRadius: 2, background: x.c, display: 'inline-block' }} />
+                        {x.l}: {x.v}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Total km */}
+            <div style={{ ...css.card, padding: 16, marginTop: 12, textAlign: 'center' }}>
+              <span style={{ fontSize: 12, color: theme.muted }}>Kilómetros totales registrados</span>
+              <div style={{ fontSize: 28, fontWeight: 800, color: theme.accent }}>{stats.totalKm.toLocaleString()} km</div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

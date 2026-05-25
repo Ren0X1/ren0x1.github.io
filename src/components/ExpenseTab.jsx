@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
-import { Euro, TrendingUp } from 'lucide-react'
+import { Euro, TrendingUp, Gauge } from 'lucide-react'
 import { theme, css } from '../lib/theme.js'
 import { Stat } from './ui.jsx'
 import { MAINT_TYPES } from '../lib/constants.js'
@@ -21,7 +21,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   )
 }
 
-export default function ExpenseTab({ maintenance, fuelLogs, isMobile }) {
+export default function ExpenseTab({ maintenance, fuelLogs, isMobile, currentKm }) {
   const { monthlyData, categoryData, totalMaint, totalFuel, grandTotal, thisYear } = useMemo(() => {
     const now = new Date()
     const year = now.getFullYear()
@@ -88,6 +88,9 @@ export default function ExpenseTab({ maintenance, fuelLogs, isMobile }) {
         <Stat icon={<Euro size={18} color="#3b82f6" />} label="Mantenimiento" value={`${totalMaint.toFixed(0)}€`} color="#3b82f6" />
         <Stat icon={<Euro size={18} color={theme.green} />} label="Combustible" value={`${totalFuel.toFixed(0)}€`} color={theme.green} />
         <Stat icon={<TrendingUp size={18} color="#8b5cf6" />} label="Este año" value={`${thisYear.toFixed(0)}€`} color="#8b5cf6" />
+        {currentKm > 0 && grandTotal > 0 && (
+          <Stat icon={<Gauge size={18} color="#ec4899" />} label="Coste/km" value={`${(grandTotal / currentKm).toFixed(3)}€`} color="#ec4899" />
+        )}
       </div>
 
       {/* Monthly bar chart */}

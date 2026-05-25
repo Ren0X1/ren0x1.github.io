@@ -456,7 +456,7 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
       />}
 
       {/* Expenses Tab */}
-      {activeTab === 'expenses' && <ExpenseTab maintenance={maintenance} fuelLogs={fuelLogs} isMobile={mob} />}
+      {activeTab === 'expenses' && <ExpenseTab maintenance={maintenance} fuelLogs={fuelLogs} isMobile={mob} currentKm={car.current_km} />}
 
       {/* KM History Tab */}
       {activeTab === 'km' && (
