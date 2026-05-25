@@ -95,7 +95,7 @@ function KmLogModal({ open, onClose, onSave, carKm }) {
 function MaintModal({ open, onClose, onSave, typeId, existing, currentKm }) {
   const mtype = MAINT_TYPES.find(t => t.id === typeId)
   const [form, setForm] = useState(existing || {
-    last_km: currentKm, last_date: today,
+    last_km: currentKm, last_date: '',
     next_km: currentKm + (mtype?.defKm || 10000), next_date: '', cost: 0, notes: '',
   })
   const [saving, setSaving] = useState(false)

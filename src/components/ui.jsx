@@ -98,6 +98,8 @@ export function DateInput({ value, onChange, style: s, ...props }) {
     if (raw.length === 8) {
       const iso = `${raw.slice(4)}-${raw.slice(2, 4)}-${raw.slice(0, 2)}`
       onChange({ target: { value: iso } })
+    } else if (raw.length === 0) {
+      onChange({ target: { value: '' } })
     }
   }
 

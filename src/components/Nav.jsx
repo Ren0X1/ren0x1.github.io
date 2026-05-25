@@ -3,7 +3,7 @@ import { theme, css } from '../lib/theme.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
 import NotificationCenter from './NotificationCenter.jsx'
 
-export default function Nav({ user, view, setView, onLogout }) {
+export default function Nav({ user, view, setView, onLogout, dataVersion }) {
   const m = useIsMobile()
   const tabs = [
     { id: 'dashboard', icon: <Car size={16} />, label: 'Vehículos' },
@@ -30,7 +30,7 @@ export default function Nav({ user, view, setView, onLogout }) {
           ))}
         </div>
         <div style={{ ...css.flex, gap: m ? 8 : 12 }}>
-          <NotificationCenter userId={user.id} isMobile={m} />
+          <NotificationCenter userId={user.id} isMobile={m} dataVersion={dataVersion} />
           {!m && <span style={{ fontSize: 13, color: theme.muted }}>{user.name}</span>}
           <button onClick={onLogout} style={{ background: 'none', border: 'none', color: theme.muted, cursor: 'pointer', display: 'flex' }}><LogOut size={18} /></button>
         </div>

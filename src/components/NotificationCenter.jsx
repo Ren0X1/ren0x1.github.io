@@ -4,7 +4,7 @@ import { theme, css } from '../lib/theme.js'
 import { getCars, getMaintenanceRecords, getItvRecords } from '../lib/supabase.js'
 import { MAINT_TYPES, getMaintStatus, formatDate } from '../lib/constants.js'
 
-export default function NotificationCenter({ userId, isMobile }) {
+export default function NotificationCenter({ userId, isMobile, dataVersion }) {
   const [alerts, setAlerts] = useState([])
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -12,9 +12,9 @@ export default function NotificationCenter({ userId, isMobile }) {
 
   useEffect(() => {
     loadAlerts()
-    const interval = setInterval(loadAlerts, 60000) // Refresh every minute
+    const interval = setInterval(loadAlerts, 60000)
     return () => clearInterval(interval)
-  }, [userId])
+  }, [userId, dataVersion])
 
   // Close on click outside
   useEffect(() => {

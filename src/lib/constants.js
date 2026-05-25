@@ -48,11 +48,15 @@ export const TRANS_TYPES = ['Manual', 'Automático']
 export function getMaintStatus(maint, currentKm) {
   if (!maint) return null
   const kmLeft = maint.next_km - currentKm
-  const today = new Date()
-  const nextDate = new Date(maint.next_date)
-  const daysLeft = Math.floor((nextDate - today) / 86400000)
-  if (kmLeft <= 0 || daysLeft <= 0) return 'overdue'
-  if (kmLeft <= 2000 || daysLeft <= 30) return 'warn'
+  const hasDate = maint.next_date && maint.next_date !== ''
+  let daysLeft = null
+  if (hasDate) {
+    const nextDate = new Date(maint.next_date)
+    daysLeft = Math.floor((nextDate - new Date()) / 86400000)
+  }
+  // Check km (always) and date (only if set)
+  if (kmLeft <= 0 || (daysLeft !== null && daysLeft <= 0)) return 'overdue'
+  if (kmLeft <= 2000 || (daysLeft !== null && daysLeft <= 30)) return 'warn'
   return 'ok'
 }
 

@@ -14,6 +14,7 @@ export default function App() {
   })
   const [view, setView] = useState('dashboard')
   const [toast, setToast] = useState(null)
+  const [dataVersion, setDataVersion] = useState(0)
 
   const handleLogin = (user) => {
     setCurrentUser(user); setView('dashboard')
@@ -25,13 +26,14 @@ export default function App() {
   }
   const onToast = useCallback((message, type = 'success') => {
     setToast({ message, type }); setTimeout(() => setToast(null), 3500)
+    if (type === 'success') setDataVersion(v => v + 1)
   }, [])
 
   if (!currentUser) return <Login onLogin={handleLogin} />
 
   return (
     <div style={{ minHeight: '100vh', background: theme.bg, color: theme.text, fontSize: 14 }}>
-      <Nav user={currentUser} view={view} setView={setView} onLogout={handleLogout} />
+      <Nav user={currentUser} view={view} setView={setView} onLogout={handleLogout} dataVersion={dataVersion} />
       {view === 'dashboard' && <Dashboard user={currentUser} onToast={onToast} />}
       {view === 'groups' && <Groups user={currentUser} onToast={onToast} />}
       {view === 'workshops' && <Workshops user={currentUser} onToast={onToast} />}
