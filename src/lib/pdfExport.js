@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { MAINT_TYPES, getMaintStatus, formatDate } from '../lib/constants.js'
+import { MAINT_TYPES, getMaintStatus, formatDate, getMaintenanceForVehicle } from '../lib/constants.js'
 
 export function exportCarPdf({ car, maintenance, kmLogs, fuelLogs, parts }) {
   const doc = new jsPDF()
@@ -33,7 +33,7 @@ export function exportCarPdf({ car, maintenance, kmLogs, fuelLogs, parts }) {
   doc.text('Mantenimientos', 14, y)
   y += 2
 
-  const maintRows = MAINT_TYPES.map(mt => {
+  const maintRows = getMaintenanceForVehicle(car.vehicle_type, car.fuel).map(mt => {
     const m = maintenance.find(x => x.type_id === mt.id)
     const status = m ? getMaintStatus(m, car.current_km) : null
     const statusText = status === 'ok' ? 'OK' : status === 'warn' ? 'Próximo' : status === 'overdue' ? 'VENCIDO' : 'Sin datos'

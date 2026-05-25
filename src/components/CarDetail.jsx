@@ -11,7 +11,7 @@ import {
   deleteMaintenanceRecord, getKmLogs, createKmLog, deleteKmLog,
   getCarParts, createCarPart, deleteCarPart, getFuelLogs, getItvRecords
 } from '../lib/supabase.js'
-import { MAINT_TYPES, FUEL_TYPES, TRANS_TYPES, getMaintStatus, formatDate } from '../lib/constants.js'
+import { MAINT_TYPES, FUEL_TYPES, TRANS_TYPES, VEHICLE_TYPES, getMaintStatus, formatDate, getMaintenanceForVehicle } from '../lib/constants.js'
 import { Modal, Field, Stat, StatusBadge, Loader, ResponsiveGrid2, DateInput, NumInput } from './ui.jsx'
 import FuelTab from './FuelTab.jsx'
 import ExpenseTab from './ExpenseTab.jsx'
@@ -137,7 +137,18 @@ function CarEditModal({ open, onClose, onSave, car }) {
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
   const handleSave = async () => { setSaving(true); try { await onSave(form) } finally { setSaving(false) } }
   return (
-    <Modal open={open} onClose={onClose} title="Editar Coche">
+    <Modal open={open} onClose={onClose} title="Editar Vehículo">
+      <Field label="Tipo de vehículo">
+        <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
+          {VEHICLE_TYPES.map(v => (
+            <button key={v.value} onClick={() => set('vehicle_type', v.value)} type="button" style={{
+              ...css.btn(form.vehicle_type === v.value ? theme.accent : theme.bg, form.vehicle_type === v.value ? '#000' : theme.muted),
+              flex: 1, justifyContent: 'center', border: `1px solid ${form.vehicle_type === v.value ? theme.accent : theme.border}`,
+              fontSize: 14, padding: '10px 8px',
+            }}>{v.emoji} {v.label}</button>
+          ))}
+        </div>
+      </Field>
       <ResponsiveGrid2>
         <Field label="Matrícula"><input style={css.input} value={form.plate} onChange={e => set('plate', e.target.value)} /></Field>
         <Field label="Marca"><input style={css.input} value={form.brand} onChange={e => set('brand', e.target.value)} /></Field>
@@ -317,12 +328,12 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
   }
   const handleEditCar = async (form) => {
     try {
-      const updated = await updateCar(car.id, { plate: form.plate, brand: form.brand, model: form.model, year: form.year, transmission: form.transmission, fuel: form.fuel, notes: form.notes })
-      setCar(updated); setShowEditCar(false); onToast('Coche actualizado')
+      const updated = await updateCar(car.id, { plate: form.plate, brand: form.brand, model: form.model, year: form.year, transmission: form.transmission, fuel: form.fuel, notes: form.notes, vehicle_type: form.vehicle_type || 'coche' })
+      setCar(updated); setShowEditCar(false); onToast('Vehículo actualizado')
     } catch (err) { onToast('Error: ' + err.message, 'error') }
   }
 
-  if (loading) return <Loader text="Cargando datos del coche..." />
+  if (loading) return <Loader text="Cargando datos del vehículo..." />
 
   const detailTabs = [
     { id: 'maint', icon: <Wrench size={14} />, label: mob ? 'Mant.' : 'Mantenimientos' },
@@ -341,7 +352,7 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
         <div style={{ display: 'flex', flexDirection: mob ? 'column' : 'row', justifyContent: 'space-between', gap: mob ? 12 : 0 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
-              <h2 style={{ ...css.h1, fontSize: mob ? 22 : 28 }}>{car.brand} {car.model}</h2>
+              <h2 style={{ ...css.h1, fontSize: mob ? 22 : 28 }}>{car.vehicle_type === 'moto' ? '🏍️' : '🚗'} {car.brand} {car.model}</h2>
               <span style={css.badge(theme.accentSoft, theme.accent)}>{car.plate}</span>
             </div>
             <div style={{ display: 'flex', gap: mob ? 10 : 16, marginTop: 6, flexWrap: 'wrap', fontSize: mob ? 12 : 13 }}>
@@ -382,7 +393,7 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
         mob ? (
           /* Mobile: card list */
           <div>
-            {MAINT_TYPES.map(mt => {
+            {getMaintenanceForVehicle(car.vehicle_type, car.fuel).map(mt => {
               const m = maintenance.find(x => x.type_id === mt.id)
               return <MaintCard key={mt.id} mt={mt} record={m} currentKm={car.current_km}
                 onEdit={() => setEditMaintType(mt.id)} onDelete={() => handleDeleteMaint(mt.id)} />
@@ -402,7 +413,7 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
                   </tr>
                 </thead>
                 <tbody>
-                  {MAINT_TYPES.map(mt => {
+                  {getMaintenanceForVehicle(car.vehicle_type, car.fuel).map(mt => {
                     const m = maintenance.find(x => x.type_id === mt.id)
                     const status = m ? getMaintStatus(m, car.current_km) : null
                     return (

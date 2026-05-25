@@ -1,11 +1,12 @@
 import { Car, Shield, LogOut, Wrench, Users } from 'lucide-react'
 import { theme, css } from '../lib/theme.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
+import NotificationCenter from './NotificationCenter.jsx'
 
 export default function Nav({ user, view, setView, onLogout }) {
   const m = useIsMobile()
   const tabs = [
-    { id: 'dashboard', icon: <Car size={16} />, label: 'Coches' },
+    { id: 'dashboard', icon: <Car size={16} />, label: 'Vehículos' },
     { id: 'groups', icon: <Users size={16} />, label: 'Grupos' },
     { id: 'workshops', icon: <Wrench size={16} />, label: 'Talleres' },
     ...(user.role === 'admin' ? [{ id: 'admin', icon: <Shield size={16} />, label: 'Admin' }] : []),
@@ -29,6 +30,7 @@ export default function Nav({ user, view, setView, onLogout }) {
           ))}
         </div>
         <div style={{ ...css.flex, gap: m ? 8 : 12 }}>
+          <NotificationCenter userId={user.id} isMobile={m} />
           {!m && <span style={{ fontSize: 13, color: theme.muted }}>{user.name}</span>}
           <button onClick={onLogout} style={{ background: 'none', border: 'none', color: theme.muted, cursor: 'pointer', display: 'flex' }}><LogOut size={18} /></button>
         </div>

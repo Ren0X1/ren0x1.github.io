@@ -51,7 +51,7 @@ function CarViewer({ car, onClose, isMobile }) {
       <button onClick={onClose} style={{ ...css.btnOutline, marginBottom: 12, fontSize: 12 }}><ChevronLeft size={14} /> Volver</button>
       <div style={{ ...css.card, padding: isMobile ? 14 : 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-          <h3 style={{ ...css.h2, fontSize: 18 }}>{car.brand} {car.model}</h3>
+          <h3 style={{ ...css.h2, fontSize: 18 }}>{car.vehicle_type === 'moto' ? '🏍️' : '🚗'} {car.brand} {car.model}</h3>
           <span style={css.badge(theme.accentSoft, theme.accent)}>{car.plate}</span>
           <span style={{ ...css.flex, gap: 4, fontSize: 12, color: theme.muted }}><Gauge size={13} />{car.current_km?.toLocaleString()} km</span>
         </div>
@@ -174,7 +174,7 @@ function GroupDetail({ group, user, onBack, onToast, isMobile }) {
   const nonMembers = allProfiles.filter(p => !members.find(m => m.user_id === p.id))
   const tabs = [
     { id: 'chat', icon: <MessageCircle size={14} />, label: 'Chat' },
-    { id: 'cars', icon: <Car size={14} />, label: 'Coches' },
+    { id: 'cars', icon: <Car size={14} />, label: 'Vehículos' },
     { id: 'members', icon: <Users size={14} />, label: `${members.length}` },
   ]
 
@@ -242,7 +242,7 @@ function GroupDetail({ group, user, onBack, onToast, isMobile }) {
             return (
               <div key={m.user_id} style={{ marginBottom: 16 }}>
                 <h3 style={{ ...css.h3, marginBottom: 8, fontSize: 14 }}>
-                  🚗 Coches de {profile?.name || 'Usuario'}
+                  🔧 Vehículos de {profile?.name || 'Usuario'}
                   {m.user_id === user.id && <span style={{ color: theme.muted, fontWeight: 400 }}> (tú)</span>}
                 </h3>
                 <div style={{ display: 'grid', gap: 8 }}>
@@ -254,7 +254,7 @@ function GroupDetail({ group, user, onBack, onToast, isMobile }) {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                            <span style={{ fontWeight: 700, fontSize: 14 }}>{car.brand} {car.model}</span>
+                            <span style={{ fontWeight: 700, fontSize: 14 }}>{car.vehicle_type === 'moto' ? '🏍️' : '🚗'} {car.brand} {car.model}</span>
                             <span style={css.badge(theme.accentSoft, theme.accent)}>{car.plate}</span>
                           </div>
                           <div style={{ display: 'flex', gap: 10, marginTop: 4, fontSize: 12, color: theme.muted }}>

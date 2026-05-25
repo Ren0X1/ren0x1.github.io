@@ -6,7 +6,7 @@ import {
 import { theme, css } from '../lib/theme.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
 import { getCars, createCar, deleteCar, getMaintenanceRecords, getCarParts, getItvRecords } from '../lib/supabase.js'
-import { FUEL_TYPES, TRANS_TYPES, getMaintStatus, formatDate } from '../lib/constants.js'
+import { FUEL_TYPES, TRANS_TYPES, VEHICLE_TYPES, getMaintStatus, formatDate } from '../lib/constants.js'
 import { Modal, Field, Loader, ResponsiveGrid2, NumInput } from './ui.jsx'
 import CarDetail from './CarDetail.jsx'
 
@@ -14,6 +14,7 @@ function CarFormModal({ open, onClose, onSave }) {
   const [form, setForm] = useState({
     plate: '', brand: '', model: '', year: new Date().getFullYear(),
     transmission: 'Manual', fuel: 'Gasolina', current_km: 0, notes: '',
+    vehicle_type: 'coche',
   })
   const [saving, setSaving] = useState(false)
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
@@ -23,7 +24,18 @@ function CarFormModal({ open, onClose, onSave }) {
     try { await onSave(form) } finally { setSaving(false) }
   }
   return (
-    <Modal open={open} onClose={onClose} title="Nuevo Coche">
+    <Modal open={open} onClose={onClose} title="Nuevo Vehículo">
+      <Field label="Tipo de vehículo">
+        <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
+          {VEHICLE_TYPES.map(v => (
+            <button key={v.value} onClick={() => set('vehicle_type', v.value)} type="button" style={{
+              ...css.btn(form.vehicle_type === v.value ? theme.accent : theme.bg, form.vehicle_type === v.value ? '#000' : theme.muted),
+              flex: 1, justifyContent: 'center', border: `1px solid ${form.vehicle_type === v.value ? theme.accent : theme.border}`,
+              fontSize: 14, padding: '10px 8px',
+            }}>{v.emoji} {v.label}</button>
+          ))}
+        </div>
+      </Field>
       <ResponsiveGrid2>
         <Field label="Matrícula"><input style={css.input} value={form.plate} onChange={e => set('plate', e.target.value)} placeholder="1234 ABC" /></Field>
         <Field label="Marca"><input style={css.input} value={form.brand} onChange={e => set('brand', e.target.value)} placeholder="BMW" /></Field>
@@ -70,7 +82,7 @@ export default function Dashboard({ user, onToast }) {
         meta[car.id] = { maint, partsCount: parts.length, itv: itv[0] || null }
       }
       setCarMeta(meta)
-    } catch (err) { onToast('Error cargando coches: ' + err.message, 'error') }
+    } catch (err) { onToast('Error cargando vehículos: ' + err.message, 'error') }
     finally { setLoading(false) }
   }
 
@@ -79,13 +91,13 @@ export default function Dashboard({ user, onToast }) {
   const handleAddCar = async (form) => {
     try {
       await createCar({ ...form, user_id: user.id })
-      setShowNewCar(false); onToast('Coche añadido'); loadCars()
+      setShowNewCar(false); onToast('Vehículo añadido'); loadCars()
     } catch (err) { onToast('Error: ' + err.message, 'error') }
   }
 
   const handleDeleteCar = async (id) => {
-    if (!confirm('¿Eliminar este coche y todos sus datos?')) return
-    try { await deleteCar(id); onToast('Coche eliminado'); loadCars() }
+    if (!confirm('¿Eliminar este vehículo y todos sus datos?')) return
+    try { await deleteCar(id); onToast('Vehículo eliminado'); loadCars() }
     catch (err) { onToast('Error: ' + err.message, 'error') }
   }
 
@@ -99,26 +111,26 @@ export default function Dashboard({ user, onToast }) {
     )
   }
 
-  if (loading) return <Loader text="Cargando coches..." />
+  if (loading) return <Loader text="Cargando vehículos..." />
 
   return (
     <div style={css.container}>
       <div style={{ paddingTop: mob ? 20 : 28, paddingBottom: 40 }}>
         <div style={{ ...css.flexBetween, marginBottom: 20, gap: 12 }}>
           <div>
-            <h1 style={{ ...css.h1, fontSize: mob ? 22 : 26 }}>Mis Coches</h1>
+            <h1 style={{ ...css.h1, fontSize: mob ? 22 : 26 }}>Mis Vehículos</h1>
             <p style={css.subtitle}>{cars.length} vehículo{cars.length !== 1 ? 's' : ''}</p>
           </div>
           <button onClick={() => setShowNewCar(true)} style={css.btn()}>
-            <Plus size={16} /> {mob ? 'Añadir' : 'Añadir Coche'}
+            <Plus size={16} /> {mob ? 'Añadir' : 'Añadir'}
           </button>
         </div>
 
         {cars.length === 0 ? (
           <div style={{ ...css.card, padding: 40, textAlign: 'center' }}>
             <Car size={40} color={theme.mutedLight} style={{ marginBottom: 12 }} />
-            <p style={{ color: theme.muted, fontSize: 13 }}>Aún no tienes coches registrados</p>
-            <button onClick={() => setShowNewCar(true)} style={{ ...css.btn(), marginTop: 12 }}><Plus size={14} /> Añadir tu primer coche</button>
+            <p style={{ color: theme.muted, fontSize: 13 }}>Aún no tienes vehículos registrados</p>
+            <button onClick={() => setShowNewCar(true)} style={{ ...css.btn(), marginTop: 12 }}><Plus size={14} /> Añadir tu primer vehículo</button>
           </div>
         ) : (
           <div style={{ display: 'grid', gap: 12 }}>
@@ -141,7 +153,7 @@ export default function Dashboard({ user, onToast }) {
                   <div style={{ padding: mob ? 14 : 20 }}>
                     {/* Title + plate */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-                      <h3 style={{ ...css.h2, fontSize: mob ? 16 : 18 }}>{car.brand} {car.model}</h3>
+                      <h3 style={{ ...css.h2, fontSize: mob ? 16 : 18 }}>{car.vehicle_type === 'moto' ? '🏍️' : '🚗'} {car.brand} {car.model}</h3>
                       <span style={css.badge(theme.accentSoft, theme.accent)}>{car.plate}</span>
                       {/* Badges and delete on same row for mobile */}
                       <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
