@@ -9,21 +9,33 @@ import {
   getGroups, createGroup, deleteGroup, getGroupMembers,
   addGroupMember, removeGroupMember, getGroupMessages,
   sendGroupMessage, getProfiles, getMemberCars,
-  getMaintenanceRecords, getCarParts, getItvRecords
+  getMaintenanceRecords, getCarParts, getItvRecords, getFuelLogs
 } from '../lib/supabase.js'
 import { getMaintStatus, MAINT_TYPES } from '../lib/constants.js'
 import { Modal, Field, Loader, StatusBadge } from './ui.jsx'
+
+function calcAvgConsumption(logs) {
+  if (logs.length < 2) return null
+  const sorted = [...logs].sort((a, b) => a.km - b.km)
+  const consumptions = []
+  for (let i = 1; i < sorted.length; i++) {
+    const kmDiff = sorted[i].km - sorted[i - 1].km
+    if (kmDiff > 0) consumptions.push((sorted[i].liters / kmDiff) * 100)
+  }
+  return consumptions.length > 0 ? +(consumptions.reduce((s, v) => s + v, 0) / consumptions.length).toFixed(1) : null
+}
 
 /* ── Read-only Car Viewer ── */
 function CarViewer({ car, onClose, isMobile }) {
   const [maint, setMaint] = useState([])
   const [parts, setParts] = useState([])
   const [itv, setItv] = useState([])
+  const [fuelLogs, setFuelLogs] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    Promise.all([getMaintenanceRecords(car.id), getCarParts(car.id), getItvRecords(car.id)])
-      .then(([m, p, i]) => { setMaint(m); setParts(p); setItv(i) })
+    Promise.all([getMaintenanceRecords(car.id), getCarParts(car.id), getItvRecords(car.id), getFuelLogs(car.id)])
+      .then(([m, p, i, f]) => { setMaint(m); setParts(p); setItv(i); setFuelLogs(f) })
       .finally(() => setLoading(false))
   }, [car.id])
 
@@ -32,6 +44,7 @@ function CarViewer({ car, onClose, isMobile }) {
   const latest_itv = itv[0]
   let overdue = 0, warn = 0
   maint.forEach(m => { const s = getMaintStatus(m, car.current_km); if (s === 'overdue') overdue++; if (s === 'warn') warn++ })
+  const avgConsumption = calcAvgConsumption(fuelLogs)
 
   return (
     <div>
@@ -52,6 +65,7 @@ function CarViewer({ car, onClose, isMobile }) {
             latest_itv.result === 'favorable' ? theme.greenSoft : theme.yellowSoft,
             latest_itv.result === 'favorable' ? theme.green : theme.yellow
           )}>ITV: {latest_itv.result}</span>}
+          {avgConsumption && <span style={css.badge('rgba(59,130,246,0.12)', '#3b82f6')}>⛽ {avgConsumption} L/100</span>}
         </div>
       </div>
 

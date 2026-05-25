@@ -437,7 +437,12 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
       {activeTab === 'parts' && <PartsTab carId={car.id} parts={parts} onAdd={handleAddPart} onDelete={handleDeletePart} isMobile={mob} />}
 
       {/* Fuel Tab */}
-      {activeTab === 'fuel' && <FuelTab carId={car.id} carKm={car.current_km} fuelLogs={fuelLogs} onReload={loadData} onToast={onToast} isMobile={mob} />}
+      {activeTab === 'fuel' && <FuelTab carId={car.id} carKm={car.current_km} fuelLogs={fuelLogs} onReload={loadData} onToast={onToast} isMobile={mob}
+        onKmUpdate={async (km) => {
+          const updated = await updateCar(car.id, { current_km: km })
+          setCar(updated)
+        }}
+      />}
 
       {/* Expenses Tab */}
       {activeTab === 'expenses' && <ExpenseTab maintenance={maintenance} fuelLogs={fuelLogs} isMobile={mob} />}
