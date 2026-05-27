@@ -2,20 +2,21 @@ import { useState, useEffect, useMemo } from 'react'
 import {
   Wrench, Edit2, Trash2, ChevronLeft, Gauge, Calendar,
   Fuel, Settings, TrendingUp, Save, AlertTriangle, CheckCircle,
-  Clock, Plus, Package, ExternalLink, FileDown, Euro
+  Clock, Plus, Package, ExternalLink, FileDown, Euro, CheckSquare
 } from 'lucide-react'
 import { theme, css } from '../lib/theme.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
 import {
   updateCar, getMaintenanceRecords, upsertMaintenanceRecord,
   deleteMaintenanceRecord, getKmLogs, createKmLog, deleteKmLog,
-  getCarParts, createCarPart, deleteCarPart, getFuelLogs, getItvRecords
+  getCarParts, createCarPart, deleteCarPart, getFuelLogs, getItvRecords, getVehicleTodos
 } from '../lib/supabase.js'
 import { MAINT_TYPES, FUEL_TYPES, TRANS_TYPES, VEHICLE_TYPES, getMaintStatus, formatDate, getMaintenanceForVehicle } from '../lib/constants.js'
 import { Modal, Field, Stat, StatusBadge, Loader, ResponsiveGrid2, DateInput, NumInput } from './ui.jsx'
 import FuelTab from './FuelTab.jsx'
 import ExpenseTab from './ExpenseTab.jsx'
 import ItvCard from './ItvCard.jsx'
+import TodoTab from './TodoTab.jsx'
 import { exportCarPdf } from '../lib/pdfExport.js'
 
 const today = new Date().toISOString().split('T')[0]
@@ -31,9 +32,17 @@ function TabBar({ tabs, active, onChange, isMobile }) {
           color: active === t.id ? theme.white : theme.muted,
           border: active === t.id ? `1px solid ${theme.border}` : '1px solid transparent',
           borderRadius: 8, padding: isMobile ? '8px 6px' : '9px 16px', cursor: 'pointer', fontWeight: 600,
-          fontSize: isMobile ? 11 : 13, fontFamily: 'inherit', transition: 'all .15s',
+          fontSize: isMobile ? 11 : 13, fontFamily: 'inherit', transition: 'all .15s', position: 'relative',
         }}>
           {t.icon} {t.label}
+          {t.badge && (
+            <span style={{
+              background: theme.accent, color: '#000', borderRadius: 10,
+              minWidth: 16, height: 16, padding: '0 4px',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 9, fontWeight: 800,
+            }}>{t.badge}</span>
+          )}
         </button>
       ))}
     </div>
@@ -266,6 +275,7 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
   const [parts, setParts] = useState([])
   const [fuelLogs, setFuelLogs] = useState([])
   const [itvRecords, setItvRecords] = useState([])
+  const [todos, setTodos] = useState([])
   const [loading, setLoading] = useState(true)
   const [showKmModal, setShowKmModal] = useState(false)
   const [editMaintType, setEditMaintType] = useState(null)
@@ -274,8 +284,8 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
 
   const loadData = async () => {
     try {
-      const [maint, logs, carParts, fuel, itv] = await Promise.all([getMaintenanceRecords(car.id), getKmLogs(car.id), getCarParts(car.id), getFuelLogs(car.id), getItvRecords(car.id)])
-      setMaintenance(maint); setKmLogs(logs); setParts(carParts); setFuelLogs(fuel); setItvRecords(itv)
+      const [maint, logs, carParts, fuel, itv, todoList] = await Promise.all([getMaintenanceRecords(car.id), getKmLogs(car.id), getCarParts(car.id), getFuelLogs(car.id), getItvRecords(car.id), getVehicleTodos(car.id)])
+      setMaintenance(maint); setKmLogs(logs); setParts(carParts); setFuelLogs(fuel); setItvRecords(itv); setTodos(todoList)
     } catch (err) { onToast('Error cargando datos: ' + err.message, 'error') }
     finally { setLoading(false) }
   }
@@ -335,8 +345,10 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
 
   if (loading) return <Loader text="Cargando datos del vehículo..." />
 
+  const pendingTodos = todos.filter(t => !t.completed).length
   const detailTabs = [
     { id: 'maint', icon: <Wrench size={14} />, label: mob ? 'Mant.' : 'Mantenimientos' },
+    { id: 'todos', icon: <CheckSquare size={14} />, label: 'Tareas', badge: pendingTodos > 0 ? pendingTodos : null },
     { id: 'parts', icon: <Package size={14} />, label: 'Recambios' },
     { id: 'fuel', icon: <Fuel size={14} />, label: mob ? 'Fuel' : 'Repostajes' },
     { id: 'expenses', icon: <Euro size={14} />, label: 'Gastos' },
@@ -445,6 +457,8 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
       )}
 
       {/* Parts Tab */}
+      {activeTab === 'todos' && <TodoTab carId={car.id} todos={todos} onReload={loadData} onToast={onToast} isMobile={mob} />}
+
       {activeTab === 'parts' && <PartsTab carId={car.id} parts={parts} onAdd={handleAddPart} onDelete={handleDeletePart} isMobile={mob} />}
 
       {/* Fuel Tab */}

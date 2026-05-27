@@ -238,6 +238,45 @@ export async function deleteFuelLog(id) {
   if (error) throw error
 }
 
+// ─── Vehicle Todos ───
+
+export async function getVehicleTodos(carId) {
+  const { data, error } = await supabase
+    .from('vehicle_todos')
+    .select('*')
+    .eq('car_id', carId)
+    .order('completed')
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data
+}
+
+export async function createVehicleTodo(todo) {
+  const { data, error } = await supabase
+    .from('vehicle_todos')
+    .insert(todo)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function updateVehicleTodo(id, updates) {
+  const { data, error } = await supabase
+    .from('vehicle_todos')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteVehicleTodo(id) {
+  const { error } = await supabase.from('vehicle_todos').delete().eq('id', id)
+  if (error) throw error
+}
+
 // ─── Workshops (Talleres) ───
 
 export async function getWorkshops() {
