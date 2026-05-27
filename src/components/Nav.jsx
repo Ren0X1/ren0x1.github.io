@@ -1,4 +1,4 @@
-import { Car, Shield, LogOut, Wrench, Users, Sun, Moon } from 'lucide-react'
+import { Car, Shield, LogOut, Wrench, Users, Sun, Moon, BarChart3 } from 'lucide-react'
 import { theme, css, getThemeMode } from '../lib/theme.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
 import NotificationCenter from './NotificationCenter.jsx'
@@ -8,6 +8,7 @@ export default function Nav({ user, view, setView, onLogout, dataVersion, onTogg
   const isDark = getThemeMode() === 'dark'
   const tabs = [
     { id: 'dashboard', icon: <Car size={16} />, label: 'Vehículos' },
+    { id: 'stats', icon: <BarChart3 size={16} />, label: 'Resumen' },
     { id: 'groups', icon: <Users size={16} />, label: 'Grupos' },
     { id: 'workshops', icon: <Wrench size={16} />, label: 'Talleres' },
     ...(user.role === 'admin' ? [{ id: 'admin', icon: <Shield size={16} />, label: 'Admin' }] : []),

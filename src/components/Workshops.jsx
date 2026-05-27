@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Wrench, Plus, Trash2, Save, Edit2, Star, Phone, MapPin } from 'lucide-react'
+import { Wrench, Plus, Trash2, Save, Edit2, Star, Phone, MapPin, MessageCircle } from 'lucide-react'
 import { theme, css } from '../lib/theme.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
 import { getWorkshops, createWorkshop, deleteWorkshop, updateWorkshop } from '../lib/supabase.js'
@@ -120,7 +120,26 @@ export default function Workshops({ user, onToast }) {
                     </div>
                     <StarRating value={ws.rating || 0} />
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
-                      {ws.phone && <a href={`tel:${ws.phone}`} style={{ display: 'flex', alignItems: 'center', gap: 6, color: theme.muted, fontSize: 13, textDecoration: 'none' }}><Phone size={13} /> {ws.phone}</a>}
+                      {ws.phone && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: theme.muted, fontSize: 13 }}>
+                            <Phone size={13} /> {ws.phone}
+                          </span>
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <a href={`tel:${ws.phone.replace(/\s/g, '')}`}
+                              style={{ ...css.btnSm(theme.accentSoft, theme.accent), textDecoration: 'none' }}
+                              title="Llamar">
+                              <Phone size={11} /> Llamar
+                            </a>
+                            <a href={`https://wa.me/${ws.phone.replace(/[^\d]/g, '').replace(/^0+/, '')}`}
+                              target="_blank" rel="noopener noreferrer"
+                              style={{ ...css.btnSm('rgba(37,211,102,0.15)', '#25D366'), textDecoration: 'none' }}
+                              title="WhatsApp">
+                              <MessageCircle size={11} /> WhatsApp
+                            </a>
+                          </div>
+                        </div>
+                      )}
                       {ws.address && <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: theme.muted, fontSize: 13 }}><MapPin size={13} /> {ws.address}</span>}
                       {ws.notes && <p style={{ color: theme.muted, fontSize: 12, marginTop: 4, fontStyle: 'italic' }}>"{ws.notes}"</p>}
                     </div>
