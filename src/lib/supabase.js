@@ -277,6 +277,45 @@ export async function deleteVehicleTodo(id) {
   if (error) throw error
 }
 
+// ─── Reminders (personal user reminders) ───
+
+export async function getReminders(userId) {
+  const { data, error } = await supabase
+    .from('reminders')
+    .select('*, cars(brand, model, plate, vehicle_type)')
+    .eq('user_id', userId)
+    .order('completed')
+    .order('due_date')
+  if (error) throw error
+  return data
+}
+
+export async function createReminder(reminder) {
+  const { data, error } = await supabase
+    .from('reminders')
+    .insert(reminder)
+    .select('*, cars(brand, model, plate, vehicle_type)')
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function updateReminder(id, updates) {
+  const { data, error } = await supabase
+    .from('reminders')
+    .update(updates)
+    .eq('id', id)
+    .select('*, cars(brand, model, plate, vehicle_type)')
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteReminder(id) {
+  const { error } = await supabase.from('reminders').delete().eq('id', id)
+  if (error) throw error
+}
+
 // ─── Workshops (Talleres) ───
 
 export async function getWorkshops() {

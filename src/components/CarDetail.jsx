@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import {
   Wrench, Edit2, Trash2, ChevronLeft, Gauge, Calendar,
   Fuel, Settings, TrendingUp, Save, AlertTriangle, CheckCircle,
-  Clock, Plus, Package, ExternalLink, FileDown, Euro, CheckSquare
+  Clock, Plus, Package, ExternalLink, FileDown, Euro, CheckSquare, FileText, FileSpreadsheet
 } from 'lucide-react'
 import { theme, css } from '../lib/theme.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
@@ -18,29 +18,37 @@ import ExpenseTab from './ExpenseTab.jsx'
 import ItvCard from './ItvCard.jsx'
 import TodoTab from './TodoTab.jsx'
 import { exportCarPdf } from '../lib/pdfExport.js'
+import { exportCarExcel } from '../lib/excelExport.js'
 
 const today = new Date().toISOString().split('T')[0]
 
 /* ── Tab Bar ── */
 function TabBar({ tabs, active, onChange, isMobile }) {
   return (
-    <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: theme.bg, borderRadius: 10, padding: 4 }}>
+    <div style={{
+      display: 'flex', gap: 4, marginBottom: 16,
+      background: theme.bg, borderRadius: 10, padding: 4,
+      overflowX: isMobile ? 'auto' : 'visible',
+      scrollbarWidth: 'none',
+    }} className="tabbar-scroll">
       {tabs.map(t => (
         <button key={t.id} onClick={() => onChange(t.id)} style={{
-          display: 'flex', alignItems: 'center', gap: isMobile ? 4 : 6, flex: 1, justifyContent: 'center',
+          display: 'flex', alignItems: 'center', gap: isMobile ? 5 : 6,
+          flex: isMobile ? '0 0 auto' : 1, justifyContent: 'center',
           background: active === t.id ? theme.card : 'transparent',
           color: active === t.id ? theme.white : theme.muted,
           border: active === t.id ? `1px solid ${theme.border}` : '1px solid transparent',
-          borderRadius: 8, padding: isMobile ? '8px 6px' : '9px 16px', cursor: 'pointer', fontWeight: 600,
-          fontSize: isMobile ? 11 : 13, fontFamily: 'inherit', transition: 'all .15s', position: 'relative',
+          borderRadius: 8, padding: isMobile ? '10px 14px' : '9px 16px', cursor: 'pointer', fontWeight: 600,
+          fontSize: isMobile ? 13 : 13, fontFamily: 'inherit', transition: 'all .15s', position: 'relative',
+          whiteSpace: 'nowrap',
         }}>
           {t.icon} {t.label}
           {t.badge && (
             <span style={{
               background: theme.accent, color: '#000', borderRadius: 10,
-              minWidth: 16, height: 16, padding: '0 4px',
+              minWidth: 18, height: 18, padding: '0 5px',
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 9, fontWeight: 800,
+              fontSize: 10, fontWeight: 800,
             }}>{t.badge}</span>
           )}
         </button>
@@ -280,6 +288,7 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
   const [showKmModal, setShowKmModal] = useState(false)
   const [editMaintType, setEditMaintType] = useState(null)
   const [showEditCar, setShowEditCar] = useState(false)
+  const [showExportMenu, setShowExportMenu] = useState(false)
   const [activeTab, setActiveTab] = useState('maint')
 
   const loadData = async () => {
@@ -377,10 +386,56 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
             <button onClick={() => setShowKmModal(true)} style={{ ...css.btn(), flex: mob ? 1 : 'none', justifyContent: 'center' }}>
               <TrendingUp size={14} /> {mob ? 'Km' : 'Registrar km'}
             </button>
-            <button onClick={() => exportCarPdf({ car, maintenance, kmLogs, fuelLogs, parts })}
-              style={{ ...css.btnOutline, color: '#8b5cf6', borderColor: 'rgba(139,92,246,0.3)' }} title="Exportar PDF">
-              <FileDown size={14} />
-            </button>
+            <div style={{ position: 'relative' }}>
+              <button onClick={() => setShowExportMenu(!showExportMenu)}
+                style={{ ...css.btnOutline, color: '#8b5cf6', borderColor: 'rgba(139,92,246,0.3)' }} title="Exportar">
+                <FileDown size={14} />
+              </button>
+              {showExportMenu && (
+                <>
+                  <div onClick={() => setShowExportMenu(false)}
+                    style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
+                  <div style={{
+                    position: 'absolute', top: '100%', right: 0, marginTop: 6,
+                    background: theme.card, border: `1px solid ${theme.border}`,
+                    borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                    zIndex: 51, minWidth: 180, overflow: 'hidden',
+                  }}>
+                    <button onClick={() => {
+                      setShowExportMenu(false)
+                      exportCarPdf({ car, maintenance, kmLogs, fuelLogs, parts, itvRecords, todos })
+                    }} style={{
+                      width: '100%', background: 'transparent', border: 'none',
+                      padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10,
+                      color: theme.text, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13,
+                      textAlign: 'left',
+                    }}>
+                      <FileText size={16} color="#ef4444" />
+                      <div>
+                        <div style={{ fontWeight: 600 }}>Exportar PDF</div>
+                        <div style={{ fontSize: 11, color: theme.muted }}>Informe completo</div>
+                      </div>
+                    </button>
+                    <div style={{ height: 1, background: theme.border }} />
+                    <button onClick={() => {
+                      setShowExportMenu(false)
+                      exportCarExcel({ car, maintenance, kmLogs, fuelLogs, parts, itvRecords, todos })
+                    }} style={{
+                      width: '100%', background: 'transparent', border: 'none',
+                      padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10,
+                      color: theme.text, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13,
+                      textAlign: 'left',
+                    }}>
+                      <FileSpreadsheet size={16} color="#22c55e" />
+                      <div>
+                        <div style={{ fontWeight: 600 }}>Exportar Excel</div>
+                        <div style={{ fontSize: 11, color: theme.muted }}>Datos en hojas</div>
+                      </div>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
             <button onClick={() => setShowEditCar(true)} style={css.btnOutline}><Edit2 size={14} /></button>
           </div>
         </div>

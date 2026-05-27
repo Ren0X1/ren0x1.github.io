@@ -205,7 +205,24 @@ CREATE TABLE IF NOT EXISTS vehicle_todos (
 
 
 -- ═══════════════════════════════════════════════════════════
--- 11) ÍNDICES
+-- 11) REMINDERS (recordatorios personales del usuario)
+-- ═══════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS reminders (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id      UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  car_id       UUID REFERENCES cars(id) ON DELETE CASCADE,
+  title        TEXT NOT NULL,
+  notes        TEXT DEFAULT '',
+  due_date     DATE NOT NULL,
+  completed    BOOLEAN DEFAULT false,
+  completed_at TIMESTAMPTZ,
+  created_at   TIMESTAMPTZ DEFAULT now()
+);
+
+
+-- ═══════════════════════════════════════════════════════════
+-- 12) ÍNDICES
 -- ═══════════════════════════════════════════════════════════
 
 CREATE INDEX IF NOT EXISTS idx_cars_user ON cars(user_id);
@@ -220,10 +237,12 @@ CREATE INDEX IF NOT EXISTS idx_group_members_user ON group_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_group_messages_group ON group_messages(group_id);
 CREATE INDEX IF NOT EXISTS idx_vehicle_todos_car ON vehicle_todos(car_id);
 CREATE INDEX IF NOT EXISTS idx_vehicle_todos_completed ON vehicle_todos(car_id, completed);
+CREATE INDEX IF NOT EXISTS idx_reminders_user ON reminders(user_id);
+CREATE INDEX IF NOT EXISTS idx_reminders_user_due ON reminders(user_id, completed, due_date);
 
 
 -- ═══════════════════════════════════════════════════════════
--- 12) ROW LEVEL SECURITY (policies permisivas)
+-- 13) ROW LEVEL SECURITY (policies permisivas)
 -- ═══════════════════════════════════════════════════════════
 
 ALTER TABLE profiles            ENABLE ROW LEVEL SECURITY;
@@ -238,6 +257,7 @@ ALTER TABLE groups              ENABLE ROW LEVEL SECURITY;
 ALTER TABLE group_members       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE group_messages      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vehicle_todos       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reminders           ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "profiles_all"        ON profiles;
 DROP POLICY IF EXISTS "cars_all"            ON cars;
@@ -251,6 +271,7 @@ DROP POLICY IF EXISTS "groups_all"          ON groups;
 DROP POLICY IF EXISTS "group_members_all"   ON group_members;
 DROP POLICY IF EXISTS "group_messages_all"  ON group_messages;
 DROP POLICY IF EXISTS "vehicle_todos_all"   ON vehicle_todos;
+DROP POLICY IF EXISTS "reminders_all"       ON reminders;
 
 CREATE POLICY "profiles_all"        ON profiles            FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "cars_all"            ON cars                FOR ALL USING (true) WITH CHECK (true);
@@ -264,10 +285,30 @@ CREATE POLICY "groups_all"          ON groups              FOR ALL USING (true) 
 CREATE POLICY "group_members_all"   ON group_members       FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "group_messages_all"  ON group_messages      FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "vehicle_todos_all"   ON vehicle_todos       FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "reminders_all"       ON reminders           FOR ALL USING (true) WITH CHECK (true);
 
 
 -- ═══════════════════════════════════════════════════════════
--- 13) DATOS INICIALES (solo si la tabla está vacía)
+-- 14) GRANTS EXPLÍCITOS (preparado para cambio Supabase 2026-10-30)
+-- ═══════════════════════════════════════════════════════════
+-- Esto asegura que las tablas son accesibles desde la API
+-- incluso después del cambio de Supabase del 30 oct 2026.
+-- También configura los defaults para tablas FUTURAS.
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO anon, authenticated, service_role;
+
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+  GRANT USAGE, SELECT ON SEQUENCES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+  GRANT EXECUTE ON FUNCTIONS TO anon, authenticated, service_role;
+
+
+-- ═══════════════════════════════════════════════════════════
+-- 15) DATOS INICIALES (solo si la tabla está vacía)
 -- ═══════════════════════════════════════════════════════════
 
 INSERT INTO profiles (name, username, pin, role)

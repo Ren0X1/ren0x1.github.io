@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Bell, X, AlertTriangle, Clock, ShieldAlert, ChevronRight } from 'lucide-react'
 import { theme, css } from '../lib/theme.js'
-import { getCars, getMaintenanceRecords, getItvRecords } from '../lib/supabase.js'
+import { getCars, getMaintenanceRecords, getItvRecords, getReminders } from '../lib/supabase.js'
 import { MAINT_TYPES, getMaintStatus, formatDate } from '../lib/constants.js'
 
 export default function NotificationCenter({ userId, isMobile, dataVersion }) {
@@ -96,6 +96,30 @@ export default function NotificationCenter({ userId, isMobile, dataVersion }) {
           }
         }
       }
+
+      // Add reminders
+      const reminders = await getReminders(userId)
+      reminders.filter(r => !r.completed).forEach(r => {
+        const today = new Date(); today.setHours(0, 0, 0, 0)
+        const due = new Date(r.due_date); due.setHours(0, 0, 0, 0)
+        const days = Math.floor((due - today) / 86400000)
+        const carInfo = r.cars ? `${r.cars.vehicle_type === 'moto' ? '🏍️' : '🚗'} ${r.cars.brand} ${r.cars.model}` : '📌 General'
+        if (days < 0) {
+          allAlerts.push({
+            id: `rem-${r.id}`, type: 'danger', icon: '🔔',
+            title: r.title, vehicle: carInfo,
+            detail: `Vencido hace ${Math.abs(days)} día${Math.abs(days) !== 1 ? 's' : ''}`,
+            priority: 0,
+          })
+        } else if (days <= 7) {
+          allAlerts.push({
+            id: `rem-${r.id}`, type: days <= 1 ? 'warning' : 'info', icon: '🔔',
+            title: r.title, vehicle: carInfo,
+            detail: days === 0 ? 'Hoy' : days === 1 ? 'Mañana' : `En ${days} días`,
+            priority: days <= 1 ? 1 : 2,
+          })
+        }
+      })
 
       // Sort: danger first, then warning, then info
       allAlerts.sort((a, b) => a.priority - b.priority)

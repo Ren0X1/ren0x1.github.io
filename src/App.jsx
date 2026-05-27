@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { theme, getThemeMode, setThemeMode } from './lib/theme.js'
+import { useIsMobile } from './lib/useIsMobile.js'
 import { updateProfile } from './lib/supabase.js'
 import { Toast, Modal, Field } from './components/ui.jsx'
 import Login from './components/Login.jsx'
@@ -9,6 +10,7 @@ import AdminPanel from './components/AdminPanel.jsx'
 import Workshops from './components/Workshops.jsx'
 import Groups from './components/Groups.jsx'
 import UserStats from './components/UserStats.jsx'
+import Reminders from './components/Reminders.jsx'
 
 function PinChangeModal({ user, onDone }) {
   const [pin, setPin] = useState('')
@@ -68,6 +70,7 @@ export default function App() {
   const [toast, setToast] = useState(null)
   const [dataVersion, setDataVersion] = useState(0)
   const [themeKey, setThemeKey] = useState(0)
+  const isMobile = useIsMobile()
 
   const handleLogin = (user) => {
     setCurrentUser(user); setView('dashboard')
@@ -98,10 +101,15 @@ export default function App() {
   }
 
   return (
-    <div key={themeKey} style={{ minHeight: '100vh', background: theme.bg, color: theme.text, fontSize: 14, transition: 'background .3s, color .3s' }}>
+    <div key={themeKey} style={{
+      minHeight: '100vh', background: theme.bg, color: theme.text, fontSize: 14,
+      transition: 'background .3s, color .3s',
+      paddingBottom: isMobile ? 'calc(env(safe-area-inset-bottom, 0) + 76px)' : 0,
+    }}>
       <Nav user={currentUser} view={view} setView={setView} onLogout={handleLogout} dataVersion={dataVersion} onToggleTheme={toggleTheme} />
       {view === 'dashboard' && <Dashboard user={currentUser} onToast={onToast} />}
       {view === 'stats' && <UserStats user={currentUser} onToast={onToast} />}
+      {view === 'reminders' && <Reminders user={currentUser} onToast={onToast} />}
       {view === 'groups' && <Groups user={currentUser} onToast={onToast} />}
       {view === 'workshops' && <Workshops user={currentUser} onToast={onToast} />}
       {view === 'admin' && currentUser.role === 'admin' && <AdminPanel onToast={onToast} />}

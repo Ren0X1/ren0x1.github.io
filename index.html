@@ -32,6 +32,23 @@
       ::-webkit-scrollbar { width: 6px; }
       ::-webkit-scrollbar-track { background: transparent; }
       ::-webkit-scrollbar-thumb { background: #303030; border-radius: 3px; }
+      .tabbar-scroll::-webkit-scrollbar { display: none; }
+      .tabbar-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+
+      /* Mobile UX improvements */
+      @media (max-width: 639px) {
+        body { font-size: 15px; }
+        button { min-height: 38px; }
+        /* Smooth scroll on mobile */
+        html { scroll-behavior: smooth; }
+        /* Bigger tap targets for icon-only buttons */
+        button[title]:not([style*="flex-direction"]) { min-width: 38px; }
+      }
+      /* Prevent text selection on UI controls */
+      button { user-select: none; -webkit-user-select: none; }
+      /* Smooth transitions */
+      button { transition: background .15s, opacity .15s, transform .1s; }
+      button:active { transform: scale(0.97); }
     </style>
   </head>
   <body>
