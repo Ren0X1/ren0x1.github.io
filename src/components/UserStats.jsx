@@ -242,7 +242,7 @@ export default function UserStats({ user, onToast }) {
                           <td style={{ ...css.td, textAlign: 'right', color: theme.green }}>{v.fuel.toFixed(0)}€</td>
                           <td style={{ ...css.td, textAlign: 'right', fontWeight: 700, color: theme.accent }}>{v.total.toFixed(0)}€</td>
                           <td style={{ ...css.td, textAlign: 'right', color: theme.muted }}>
-                            {v.km > 0 ? `${(v.total / v.km).toFixed(3)}€` : '—'}
+                            {v.km > 0 ? `${(v.total / v.km).toFixed(2)}€` : '—'}
                           </td>
                         </tr>
                       ))}
@@ -253,7 +253,7 @@ export default function UserStats({ user, onToast }) {
                         <td style={{ ...css.td, textAlign: 'right', fontWeight: 700, color: theme.green }}>{stats.totalFuel.toFixed(0)}€</td>
                         <td style={{ ...css.td, textAlign: 'right', fontWeight: 800, color: theme.accent }}>{stats.grandTotal.toFixed(0)}€</td>
                         <td style={{ ...css.td, textAlign: 'right', fontWeight: 700, color: theme.muted }}>
-                          {stats.totalKm > 0 ? `${(stats.grandTotal / stats.totalKm).toFixed(3)}€` : '—'}
+                          {stats.totalKm > 0 ? `${(stats.grandTotal / stats.totalKm).toFixed(2)}€` : '—'}
                         </td>
                       </tr>
                     </tbody>
