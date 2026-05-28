@@ -77,29 +77,29 @@ export default function Nav({ user, view, setView, onLogout, dataVersion, onTogg
   // ─── DESKTOP: Single top bar (original) ───
   return (
     <header style={{ background: theme.card, borderBottom: `1px solid ${theme.border}`, position: 'sticky', top: 0, zIndex: 100 }}>
-      <div style={{ ...css.container, ...css.flexBetween, height: 56 }}>
-        <div style={{ ...css.flex, gap: 12 }}>
-          <Car size={22} color={theme.accent} />
-          <span style={{ fontWeight: 800, fontSize: 17, color: isDark ? '#fff' : '#111', letterSpacing: -0.5 }}>Pibes Mecánicos</span>
+      <div style={{ ...css.container, ...css.flexBetween, height: 56, gap: 12 }}>
+        <div style={{ ...css.flex, gap: 10, flexShrink: 0 }}>
+          <Car size={22} color={theme.accent} style={{ flexShrink: 0 }} />
+          <span style={{ fontWeight: 800, fontSize: 17, color: isDark ? '#fff' : '#111', letterSpacing: -0.5, whiteSpace: 'nowrap' }}>Pibes Mecánicos</span>
         </div>
-        <div style={{ ...css.flex, gap: 4 }}>
+        <div style={{ ...css.flex, gap: 2, flexShrink: 1, justifyContent: 'center' }}>
           {tabs.map(t => (
             <button key={t.id} onClick={() => setView(t.id)} style={{
               ...css.flex, gap: 5,
               background: view === t.id ? theme.accentSoft : 'transparent',
               color: view === t.id ? theme.accent : theme.muted,
-              border: 'none', borderRadius: 8, padding: '6px 14px',
-              cursor: 'pointer', fontWeight: 600, fontSize: 13, fontFamily: 'inherit',
+              border: 'none', borderRadius: 8, padding: '6px 11px',
+              cursor: 'pointer', fontWeight: 600, fontSize: 13, fontFamily: 'inherit', whiteSpace: 'nowrap',
             }}>{t.icon} {t.label}</button>
           ))}
         </div>
-        <div style={{ ...css.flex, gap: 10 }}>
+        <div style={{ ...css.flex, gap: 10, flexShrink: 0 }}>
           <button onClick={onToggleTheme} title={isDark ? 'Modo claro' : 'Modo oscuro'}
             style={{ background: 'none', border: 'none', color: theme.muted, cursor: 'pointer', display: 'flex', padding: 4 }}>
             {isDark ? <Sun size={18} /> : <Moon size={18} />}
           </button>
           <NotificationCenter userId={user.id} isMobile={m} dataVersion={dataVersion} />
-          <span style={{ fontSize: 13, color: theme.muted }}>{user.name}</span>
+          <span style={{ fontSize: 13, color: theme.muted, whiteSpace: 'nowrap' }}>{user.name}</span>
           <button onClick={onLogout} style={{ background: 'none', border: 'none', color: theme.muted, cursor: 'pointer', display: 'flex' }}><LogOut size={18} /></button>
         </div>
       </div>
