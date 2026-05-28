@@ -110,24 +110,40 @@ export function DateInput({ value, onChange, style: s, ...props }) {
 export function NumInput({ value, onChange, step, decimal, style: s, ...props }) {
   const [text, setText] = useState(value != null && value !== 0 ? String(value) : '')
 
-  useEffect(() => {
-    setText(value != null && value !== 0 ? String(value) : '')
-  }, [value])
-
   const isDecimal = decimal || (step && parseFloat(step) < 1)
 
+  useEffect(() => {
+    // Don't clobber what the user is typing if it already equals the value
+    // (e.g. they typed "3," which parses to 3 — keep the comma)
+    const currentNum = text === '' ? 0 : parseFloat(text.replace(',', '.'))
+    if (currentNum !== value) {
+      setText(value != null && value !== 0 ? String(value) : '')
+    }
+  }, [value])
+
   const handleChange = (e) => {
-    // Allow digits, one dot, and one minus at start
     let v = e.target.value
-    if (!isDecimal) v = v.replace(/[^\d]/g, '')
-    else v = v.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1')
+    if (!isDecimal) {
+      v = v.replace(/[^\d]/g, '')
+    } else {
+      // Allow digits + comma + dot (iPhone ES keyboard shows comma)
+      v = v.replace(/[^\d.,]/g, '')
+      // Keep only the first decimal separator, drop the rest
+      const sepIdx = v.search(/[.,]/)
+      if (sepIdx !== -1) {
+        const sep = v[sepIdx]
+        v = v.slice(0, sepIdx) + sep + v.slice(sepIdx + 1).replace(/[.,]/g, '')
+      }
+    }
     setText(v)
-    const num = v === '' ? 0 : parseFloat(v)
+    // Normalize comma to dot for the actual numeric value
+    const normalized = v.replace(',', '.')
+    const num = (normalized === '' || normalized === '.') ? 0 : parseFloat(normalized)
     if (!isNaN(num)) onChange({ target: { value: num } })
   }
 
   return <input type="text" inputMode={isDecimal ? 'decimal' : 'numeric'}
-    pattern={isDecimal ? '[0-9.]*' : '[0-9]*'}
+    pattern={isDecimal ? '[0-9.,]*' : '[0-9]*'}
     value={text} onChange={handleChange}
     onFocus={e => { if (e.target.value === '0') { setText(''); } }}
     placeholder="0" style={{ ...css.input, ...s }} {...props} />

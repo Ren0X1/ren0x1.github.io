@@ -137,7 +137,7 @@ function MaintModal({ open, onClose, onSave, typeId, existing, currentKm }) {
         <Field label="Fecha próximo cambio"><DateInput value={form.next_date} onChange={e => set('next_date', e.target.value)} /></Field>
       </ResponsiveGrid2>
       <ResponsiveGrid2>
-        <Field label="Coste (€)"><NumInput value={form.cost} onChange={e => set('cost', +e.target.value)} /></Field>
+        <Field label="Coste (€)"><NumInput decimal value={form.cost} onChange={e => set('cost', +e.target.value)} /></Field>
         <Field label="Notas"><input style={css.input} value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Marca, taller..." /></Field>
       </ResponsiveGrid2>
       <div style={{ ...css.flex, justifyContent: 'flex-end', marginTop: 8, gap: 8 }}>

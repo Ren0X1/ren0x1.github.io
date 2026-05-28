@@ -119,7 +119,7 @@ function ItvFormModal({ open, onClose, onSave, initial, isEditing }) {
           <input style={css.input} value={form.station} onChange={e => set('station', e.target.value)} placeholder="Nombre estación" />
         </Field>
         <Field label="Coste (€)">
-          <NumInput value={form.cost} onChange={e => set('cost', +e.target.value)} />
+          <NumInput decimal value={form.cost} onChange={e => set('cost', +e.target.value)} />
         </Field>
       </ResponsiveGrid2>
       <Field label="Notas">
