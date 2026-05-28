@@ -1,140 +1,151 @@
-[![Deploy to GitHub Pages](https://github.com/Ren0X1/ren0x1.github.io/actions/workflows/deploy.yml/badge.svg?branch=master)](https://github.com/Ren0X1/ren0x1.github.io/actions/workflows/deploy.yml)
+# 🔧 Pibes Mecánicos
 
-<div align="center">
-  <img src="public/icon-512.png" alt="Pibes Mecánicos" width="120" />
-  <h1>🔧 Pibes Mecánicos</h1>
-  <p><strong>El taller de los pibes</strong></p>
-  <p>App de control de mantenimiento de vehículos para ti y tus amigos.<br/>Gratis, instalable en el móvil, desplegada en GitHub Pages con Supabase.</p>
-  <p>
-    <a href="https://loscolegones.com/">🌐 Ver la app</a>
-  </p>
-</div>
+> El taller de los pibes — app web para llevar el control del mantenimiento de tus vehículos entre amigos.
+
+Aplicación web responsive (PWA instalable en iPhone/Android) para registrar y seguir el mantenimiento de coches y motos: revisiones, ITV, repostajes con consumo, gastos, recambios, tareas pendientes y mucho más. Pensada para un grupo de amigos que comparten información de sus vehículos.
 
 ---
 
 ## ✨ Funcionalidades
 
-### 🚗 Gestión de vehículos
-Registra tus coches con matrícula, marca, modelo, año, tipo de transmisión (manual/automático) y combustible. Cada coche tiene su propio panel con toda la información organizada en pestañas.
+### 🚗 Vehículos
+- Coches y motos, con tipo de combustible y transmisión.
+- Kilometraje actual e historial de km.
+- Mantenimientos filtrados según tipo de vehículo y combustible (las bujías no salen en diésel, los calentadores solo en diésel, cadena/kit de arrastre solo en moto, etc.).
+- Más de 18 tipos de mantenimiento con intervalos por km y por meses. Se puede registrar solo por km, solo por fecha, o ambos.
+- Recambios con referencia y enlace de compra.
+- **ITV** con resultado (favorable / desfavorable / negativa), defectos, caducidad y avisos de vencimiento.
+- **Repostajes** con cálculo de consumo por depósito, modo de conducción (ciudad / mixto / carretera) y consumo medio.
+- **Gastos** con gráficos por mes y por categoría, y coste por kilómetro.
+- **Tareas (TODO)** por vehículo con prioridad (baja / media / alta).
 
-### 🔧 Control de mantenimientos
-18 tipos de mantenimiento predefinidos con intervalos recomendados por kilómetros y meses: aceite motor, filtros (aceite, aire, habitáculo), pastillas y discos de freno, neumáticos, correa de distribución, líquido de frenos, refrigerante, bujías, diferencial, caja de cambios, embrague, batería, amortiguadores y escobillas. Sistema de alertas semáforo — verde (al día), amarillo (próximo a vencer), rojo (vencido). Al registrar un mantenimiento se autocompleta la fecha y km del próximo cambio.
+### 📊 Resumen
+- Estadísticas agregadas de todos tus vehículos: gasto total, mantenimiento, combustible, km totales.
+- Tabla de gastos por vehículo con coste/km.
+- Gráficos de gasto mensual y distribución por vehículo.
 
-### 📋 Recambios
-Tabla libre por coche donde apuntar las piezas que usa: nombre, referencia del fabricante y enlace para comprar. Ideal para no tener que buscar cada vez qué filtro o pastillas lleva tu coche.
-
-### 🔍 ITV
-Registro completo de inspecciones técnicas con tres estados: favorable, desfavorable y negativa. Si no pasa, puedes apuntar los defectos y marcar cuando los hayas reparado. Alerta automática cuando la ITV está próxima a caducar (30/60 días) o ya ha caducado. Historial de todas las inspecciones con estación, coste y notas.
-
-### ⛽ Repostajes
-Registra cada vez que echas combustible: km, litros, precio por litro, si llenaste el depósito y notas. La app calcula automáticamente el consumo medio (L/100km) comparando repostajes consecutivos de depósito lleno, el gasto total en combustible y el precio medio por litro.
-
-### 📊 Gastos
-Gráfico de barras apiladas de los últimos 12 meses desglosando mantenimiento vs combustible. Gráfico de donut con el desglose por categoría (aceite, neumáticos, combustible…). Resumen con total gastado, gasto en mantenimiento, gasto en combustible y acumulado del año actual.
-
-### 📄 Exportar PDF
-Botón en la cabecera de cada coche que genera un informe PDF completo con datos del vehículo, tabla de mantenimientos con colores por estado, recambios, repostajes y historial de kilómetros. Paginación automática.
-
-### 📏 Registro de kilómetros
-Historial de km por fecha con notas. Al registrar km el coche se actualiza siempre al valor introducido (sin restricción de "solo subir"). Cada registro se puede borrar y el coche recalcula sus km al último registro restante.
+### 🔔 Recordatorios y notificaciones
+- Recordatorios personales con fecha y vehículo opcional (seguros, ITVs, compras...).
+- Centro de notificaciones con avisos de mantenimientos vencidos/próximos, ITVs por caducar, recordatorios e invitaciones a grupos. Se actualiza al instante.
 
 ### 👥 Grupos
-Sistema de grupos creado por admins donde se añaden los usuarios. Dentro de cada grupo hay tres pestañas: **Chat** en tiempo real (polling cada 10s) con burbujas tipo WhatsApp, **Coches** compartidos en modo lectura donde puedes ver mantenimientos, recambios e ITV de los coches de cualquier miembro, y **Miembros** con gestión de altas y bajas.
+- Los usuarios **solicitan** crear un grupo; un admin lo aprueba.
+- El creador del grupo se convierte en **admin del grupo** y puede **invitar** a otros.
+- Los invitados **deciden** si entrar o no.
+- Chat de grupo y visor de vehículos de los miembros (solo lectura).
 
-### 🔧 Directorio de talleres
-Directorio compartido entre todos los usuarios con nombre, teléfono (clickable para llamar), dirección, especialidad, valoración con estrellas y notas. Los admins pueden borrar y editar cualquier taller. Los usuarios normales solo pueden editar y borrar los que ellos han creado.
+### 🔧 Talleres
+- Directorio compartido de talleres con valoración, especialidad y teléfono.
+- Botones de **llamar** y **WhatsApp** directos.
 
-### 👤 Gestión de usuarios
-Login por nombre de usuario + PIN numérico. Panel de administración donde el admin puede crear y eliminar usuarios. Sesión guardada en sessionStorage.
+### 🛡️ Panel de administración
+- Gestión de usuarios separados en **administradores** y **usuarios**.
+- Crear, editar (nombre, usuario, rol) y eliminar usuarios.
+- **Restablecer PIN** directamente o forzar cambio de PIN.
+- Aprobar / rechazar solicitudes de grupos.
+- Estadísticas globales con gráficos.
 
-### 📱 Diseño responsive + PWA
-Diseño adaptado para móvil con layout específico: navbar compacta con solo iconos, tarjetas de mantenimiento en vez de tabla, stats en grid 2x2, formularios en una columna, modales full-screen. Teclado numérico en móvil para PIN, fechas, km, precios y litros. Fechas en formato español (DD/MM/AAAA). Instalable en la pantalla de inicio del iPhone con icono personalizado.
+### 📄 Exportación
+- **PDF** profesional con portada, KPIs, estado general y secciones detalladas.
+- **Excel** con estilos (hojas por sección, colores, totales, formatos de número).
 
----
-
-## 🚀 Setup
-
-### 1. Crear proyecto en Supabase (gratis)
-
-Ve a [supabase.com](https://supabase.com), crea una cuenta y un nuevo proyecto con la región EU West.
-
-### 2. Crear las tablas
-
-En Supabase → **SQL Editor** → **New query**, pega el contenido de `supabase/schema.sql` y ejecuta. Si vienes de una versión anterior, ejecuta los ficheros `migration-*.sql` en orden.
-
-### 3. Conseguir las credenciales
-
-En Supabase → **Settings** → **API**, copia:
-
-| Valor | Dónde está |
-|---|---|
-| **Project URL** | `https://xxxxx.supabase.co` |
-| **anon public key** | Cadena que empieza por `eyJ...` |
-
-### 4. Configurar secrets en GitHub
-
-En tu repo → **Settings** → **Secrets and variables** → **Actions**, añade:
-
-| Secret | Valor |
-|---|---|
-| `VITE_SUPABASE_URL` | Tu Project URL |
-| `VITE_SUPABASE_ANON_KEY` | Tu anon key |
-
-### 5. Activar GitHub Pages
-
-En tu repo → **Settings** → **Pages** → Source: **GitHub Actions**. Haz push y espera al deploy.
+### 🎨 Otros
+- Tema **oscuro** (por defecto) y **claro**, con toggle.
+- Idioma español, fechas en formato DD/MM/AAAA.
+- Login por usuario + PIN con bloqueo progresivo ante intentos fallidos.
+- Diseño **mobile-first** con navegación inferior en móvil.
 
 ---
 
-## 🖥️ Desarrollo local
+## 🛠️ Stack tecnológico
 
+| Capa | Tecnología |
+|------|-----------|
+| Frontend | React 19 + Vite |
+| Iconos | lucide-react |
+| Gráficos | recharts |
+| PDF | jspdf + jspdf-autotable |
+| Excel | exceljs |
+| Base de datos | Supabase (PostgreSQL) |
+| Hosting | GitHub Pages (deploy automático con GitHub Actions) |
+
+---
+
+## 🚀 Puesta en marcha
+
+### 1. Base de datos (Supabase)
+1. Crea un proyecto en [supabase.com](https://supabase.com).
+2. Abre **SQL Editor** y ejecuta el contenido de `supabase/schema-completo.sql`. Es idempotente: crea todas las tablas, índices, políticas y permisos. Crea también un usuario admin por defecto (`admin` / `1234`).
+3. En **Project Settings → API**, copia la `URL` y la `anon key`.
+
+### 2. Variables de entorno
+En GitHub, ve a **Settings → Secrets and variables → Actions** y crea:
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+
+Para desarrollo local, crea un fichero `.env` en la raíz:
+```
+VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
+VITE_SUPABASE_ANON_KEY=tu-anon-key
+```
+
+### 3. Desarrollo local
 ```bash
 npm install
-cp .env.example .env    # edita con tus credenciales de Supabase
 npm run dev
+```
+
+### 4. Despliegue
+Cada push a la rama `master` despliega automáticamente en GitHub Pages mediante el workflow de `.github/workflows/`.
+
+---
+
+## 🗄️ Migraciones de base de datos
+
+El fichero `supabase/schema-completo.sql` contiene el esquema completo y actualizado. Para cambios incrementales sobre una base de datos existente, en la carpeta `supabase/` hay migraciones individuales que se pueden ejecutar en el SQL Editor.
+
+> **Nota sobre Supabase (oct 2026):** a partir del 30/10/2026 Supabase no expone automáticamente las tablas nuevas a la API. El esquema ya incluye los `GRANT` explícitos y los *default privileges* necesarios, así que las tablas que crees seguirán siendo accesibles. Si tienes dudas, ejecuta `supabase/migration-grants.sql`.
+
+---
+
+## 🔐 Acceso por defecto
+
+- **Usuario:** `admin`
+- **PIN:** `1234`
+
+> Cambia el PIN del admin en cuanto entres por primera vez.
+
+---
+
+## 📁 Estructura del proyecto
+
+```
+src/
+  App.jsx                 # Routing de vistas, tema, cambio de PIN
+  lib/
+    supabase.js           # Todas las funciones de base de datos
+    theme.js              # Tema reactivo oscuro/claro
+    constants.js          # Tipos de mantenimiento, helpers de fechas
+    pdfExport.js          # Exportación a PDF
+    excelExport.js        # Exportación a Excel
+    useIsMobile.js        # Hook responsive
+  components/
+    Login.jsx             # Login + bloqueo por intentos
+    Nav.jsx               # Navegación (superior en desktop, inferior en móvil)
+    Dashboard.jsx         # Lista de vehículos
+    CarDetail.jsx         # Detalle del vehículo con pestañas
+    UserStats.jsx         # Resumen global
+    Reminders.jsx         # Recordatorios personales
+    Groups.jsx            # Grupos, invitaciones y chat
+    Workshops.jsx         # Directorio de talleres
+    AdminPanel.jsx        # Panel de administración
+    NotificationCenter.jsx# Centro de notificaciones
+    ...
+supabase/
+  schema-completo.sql     # Esquema completo (ejecutar para empezar)
+  migration-*.sql         # Migraciones incrementales
 ```
 
 ---
 
-## 👤 Credenciales por defecto
-
-| Nombre | Usuario | PIN | Rol |
-|---|---|---|---|
-| Admin | admin | 1234 | admin |
-| Carlos | carlos | 1234 | user |
-| Miguel | miguel | 1234 | user |
-
-> Cambia los nombres, usuarios y PINs en `supabase/schema.sql` antes de ejecutarlo, o desde el panel de Admin de la app.
-
----
-
-## 🗃️ Base de datos
-
-| Tabla | Descripción |
-|---|---|
-| `profiles` | Usuarios (nombre, usuario, pin, rol) |
-| `cars` | Coches (matrícula, marca, modelo, km...) |
-| `km_logs` | Historial de kilómetros |
-| `maintenance_records` | Registros de mantenimiento por tipo |
-| `car_parts` | Recambios por coche |
-| `fuel_logs` | Repostajes (litros, precio, consumo) |
-| `itv_records` | Inspecciones ITV (resultado, defectos, caducidad) |
-| `workshops` | Directorio de talleres compartido |
-| `groups` | Grupos de usuarios |
-| `group_members` | Miembros de cada grupo |
-| `group_messages` | Mensajes del chat de grupo |
-
----
-
-## 🛠️ Stack
-
-| Capa | Tecnología |
-|---|---|
-| Frontend | React 19 + Vite 8 |
-| Iconos | Lucide React |
-| Gráficos | Recharts |
-| PDF | jsPDF + jsPDF-AutoTable |
-| Base de datos | Supabase (PostgreSQL gratuito) |
-| Hosting | GitHub Pages (gratuito) |
-| Deploy | GitHub Actions |
-| PWA | manifest.json + apple-touch-icon |
+Hecho con 🔧 y 🍺 para los pibes.

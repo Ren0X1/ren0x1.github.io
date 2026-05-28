@@ -175,33 +175,42 @@ export default function AdminPanel({ onToast }) {
         {tab === 'users' && (
           <>
             <div style={{ ...css.flexBetween, marginBottom: 16, gap: 12 }}>
-              <p style={css.subtitle}>{users.length} usuario{users.length !== 1 ? 's' : ''}</p>
+              <p style={css.subtitle}>
+                {users.filter(u => u.role === 'admin').length} admin{users.filter(u => u.role === 'admin').length !== 1 ? 's' : ''} · {users.filter(u => u.role !== 'admin').length} usuario{users.filter(u => u.role !== 'admin').length !== 1 ? 's' : ''}
+              </p>
               <button onClick={() => setShowNew(true)} style={css.btn()}><Plus size={16} /> {mob ? 'Nuevo' : 'Nuevo Usuario'}</button>
             </div>
-            <div style={{ display: 'grid', gap: 10 }}>
-              {users.map(u => {
+
+            {(() => {
+              const renderUserCard = (u) => {
                 const uCars = allCars.filter(c => c.user_id === u.id)
+                const isAdminUser = u.role === 'admin'
                 return (
-                  <div key={u.id} style={{ ...css.card, padding: mob ? 14 : 20 }}>
+                  <div key={u.id} style={{
+                    ...css.card, padding: mob ? 14 : 18, marginBottom: 0,
+                    border: `1px solid ${isAdminUser ? theme.accent + '33' : theme.border}`,
+                  }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
-                          <span style={{ fontWeight: 700, fontSize: 15, color: theme.text }}>{u.name}</span>
-                          <span style={css.badge(u.role === 'admin' ? theme.accentSoft : theme.greenSoft, u.role === 'admin' ? theme.accent : theme.green)}>
-                            {u.role === 'admin' ? 'Admin' : 'Usuario'}
-                          </span>
-                          {u.pin_change_required && <span style={css.badge(theme.yellowSoft, theme.yellow)}>PIN pendiente</span>}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
+                        <div style={{ background: isAdminUser ? theme.accentSoft : theme.bg, borderRadius: 10, padding: 9, display: 'flex', flexShrink: 0 }}>
+                          {isAdminUser ? <ShieldCheck size={18} color={theme.accent} /> : <Users size={18} color={theme.muted} />}
                         </div>
-                        <p style={{ fontSize: 12, color: theme.muted }}>
-                          @{u.username} · {uCars.length} vehículo{uCars.length !== 1 ? 's' : ''}
-                        </p>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 2 }}>
+                            <span style={{ fontWeight: 700, fontSize: 15, color: theme.text }}>{u.name}</span>
+                            {u.pin_change_required && <span style={css.badge(theme.yellowSoft, theme.yellow)}>PIN pendiente</span>}
+                          </div>
+                          <p style={{ fontSize: 12, color: theme.muted }}>
+                            @{u.username} · {uCars.length} vehículo{uCars.length !== 1 ? 's' : ''}
+                          </p>
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', gap: 4 }}>
+                      <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
                         <button onClick={() => openEdit(u)} title="Editar usuario"
                           style={css.btnSm(theme.accentSoft, theme.accent)}><Edit2 size={12} /></button>
                         <button onClick={() => { setResetPinUser(u); setNewPin('') }} title="Restablecer PIN"
                           style={css.btnSm('rgba(59,130,246,0.12)', '#3b82f6')}><Key size={12} /></button>
-                        {u.role !== 'admin' && (
+                        {!isAdminUser && (
                           <>
                             <button onClick={() => handleForcePin(u.id, u.name)} title="Forzar cambio de PIN"
                               style={css.btnSm(theme.yellowSoft, theme.yellow)}><UserCog size={12} /></button>
@@ -213,8 +222,37 @@ export default function AdminPanel({ onToast }) {
                     </div>
                   </div>
                 )
-              })}
-            </div>
+              }
+              const admins = users.filter(u => u.role === 'admin')
+              const regular = users.filter(u => u.role !== 'admin')
+              return (
+                <>
+                  {/* Administradores */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <ShieldCheck size={15} color={theme.accent} />
+                    <h3 style={{ ...css.h3, fontSize: 14 }}>Administradores</h3>
+                    <span style={css.badge(theme.accentSoft, theme.accent)}>{admins.length}</span>
+                  </div>
+                  <div style={{ display: 'grid', gap: 10, marginBottom: 24 }}>
+                    {admins.length > 0
+                      ? admins.map(renderUserCard)
+                      : <p style={{ ...css.subtitle, padding: '8px 0' }}>No hay administradores.</p>}
+                  </div>
+
+                  {/* Usuarios */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <Users size={15} color={theme.muted} />
+                    <h3 style={{ ...css.h3, fontSize: 14 }}>Usuarios</h3>
+                    <span style={css.badge(theme.greenSoft, theme.green)}>{regular.length}</span>
+                  </div>
+                  <div style={{ display: 'grid', gap: 10 }}>
+                    {regular.length > 0
+                      ? regular.map(renderUserCard)
+                      : <p style={{ ...css.subtitle, padding: '8px 0' }}>No hay usuarios normales todavía.</p>}
+                  </div>
+                </>
+              )
+            })()}
 
             <Modal open={showNew} onClose={() => setShowNew(false)} title="Nuevo Usuario">
               <p style={{ ...css.subtitle, marginBottom: 16 }}>Se le pedirá cambiar el PIN en su primer inicio de sesión.</p>
