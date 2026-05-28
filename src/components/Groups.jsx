@@ -1,15 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
 import {
   Users, Plus, Trash2, Save, ChevronLeft, Send, MessageCircle,
-  Car, UserPlus, X, Gauge, Calendar, Settings as SettingsIcon, Fuel, Eye
+  Car, UserPlus, X, Gauge, Calendar, Settings as SettingsIcon, Fuel, Eye,
+  Crown, Clock, Check, Mail, Inbox, Sparkles
 } from 'lucide-react'
 import { theme, css } from '../lib/theme.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
 import {
-  getGroups, createGroup, deleteGroup, getGroupMembers,
-  addGroupMember, removeGroupMember, getGroupMessages,
-  sendGroupMessage, getProfiles, getMemberCars,
-  getMaintenanceRecords, getCarParts, getItvRecords, getFuelLogs
+  getGroups, createGroup, requestGroup, deleteGroup, getGroupMembers,
+  removeGroupMember, getGroupMessages, sendGroupMessage, getProfiles, getMemberCars,
+  getMaintenanceRecords, getCarParts, getItvRecords, getFuelLogs,
+  inviteToGroup, getMyInvitations, getGroupInvitations, acceptInvitation, rejectInvitation
 } from '../lib/supabase.js'
 import { getMaintStatus, MAINT_TYPES } from '../lib/constants.js'
 import { Modal, Field, Loader, StatusBadge } from './ui.jsx'
@@ -69,7 +70,6 @@ function CarViewer({ car, onClose, isMobile }) {
         </div>
       </div>
 
-      {/* Maintenance summary */}
       {maint.length > 0 && (
         <div style={{ ...css.card, padding: 0, overflow: 'hidden', marginTop: 8 }}>
           <div style={{ padding: '10px 14px', borderBottom: `1px solid ${theme.border}`, fontSize: 13, fontWeight: 600 }}>Mantenimientos</div>
@@ -89,7 +89,6 @@ function CarViewer({ car, onClose, isMobile }) {
         </div>
       )}
 
-      {/* Parts */}
       {parts.length > 0 && (
         <div style={{ ...css.card, padding: 0, overflow: 'hidden', marginTop: 8 }}>
           <div style={{ padding: '10px 14px', borderBottom: `1px solid ${theme.border}`, fontSize: 13, fontWeight: 600 }}>Recambios</div>
@@ -108,25 +107,28 @@ function CarViewer({ car, onClose, isMobile }) {
 /* ── Group Detail ── */
 function GroupDetail({ group, user, onBack, onToast, isMobile }) {
   const [members, setMembers] = useState([])
+  const [invitations, setInvitations] = useState([])
   const [messages, setMessages] = useState([])
   const [allProfiles, setAllProfiles] = useState([])
   const [memberCars, setMemberCars] = useState({})
   const [newMsg, setNewMsg] = useState('')
   const [sending, setSending] = useState(false)
-  const [showAddMember, setShowAddMember] = useState(false)
+  const [showInvite, setShowInvite] = useState(false)
   const [viewingCar, setViewingCar] = useState(null)
   const [tab, setTab] = useState('chat')
   const [loading, setLoading] = useState(true)
   const chatEnd = useRef(null)
-  const isAdmin = user.role === 'admin'
+
+  // Group admin = creator of the group. Site admin can also manage.
+  const isGroupAdmin = group.created_by === user.id || user.role === 'admin'
 
   const load = async () => {
     try {
-      const [mem, msgs, profiles] = await Promise.all([
-        getGroupMembers(group.id), getGroupMessages(group.id), getProfiles()
+      const [mem, msgs, profiles, invs] = await Promise.all([
+        getGroupMembers(group.id), getGroupMessages(group.id), getProfiles(),
+        getGroupInvitations(group.id),
       ])
-      setMembers(mem); setMessages(msgs); setAllProfiles(profiles)
-      // Load cars for each member
+      setMembers(mem); setMessages(msgs); setAllProfiles(profiles); setInvitations(invs)
       const cars = {}
       for (const m of mem) { cars[m.user_id] = await getMemberCars(m.user_id) }
       setMemberCars(cars)
@@ -137,7 +139,6 @@ function GroupDetail({ group, user, onBack, onToast, isMobile }) {
   useEffect(() => { load() }, [group.id])
   useEffect(() => { chatEnd.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
-  // Poll for new messages every 10s
   useEffect(() => {
     const interval = setInterval(async () => {
       try { setMessages(await getGroupMessages(group.id)) } catch {}
@@ -155,10 +156,10 @@ function GroupDetail({ group, user, onBack, onToast, isMobile }) {
     finally { setSending(false) }
   }
 
-  const handleAddMember = async (userId) => {
+  const handleInvite = async (userId) => {
     try {
-      await addGroupMember(group.id, userId)
-      setShowAddMember(false); onToast('Miembro añadido'); load()
+      await inviteToGroup(group.id, userId, user.id)
+      setShowInvite(false); onToast('Invitación enviada'); load()
     } catch (err) { onToast('Error: ' + err.message, 'error') }
   }
 
@@ -171,17 +172,39 @@ function GroupDetail({ group, user, onBack, onToast, isMobile }) {
   if (loading) return <Loader text="Cargando grupo..." />
   if (viewingCar) return <CarViewer car={viewingCar} onClose={() => setViewingCar(null)} isMobile={isMobile} />
 
-  const nonMembers = allProfiles.filter(p => !members.find(m => m.user_id === p.id))
+  // Users not in the group and without a pending invite
+  const invitedIds = invitations.map(i => i.user_id)
+  const invitable = allProfiles.filter(p => !members.find(m => m.user_id === p.id) && !invitedIds.includes(p.id))
+
   const tabs = [
-    { id: 'chat', icon: <MessageCircle size={14} />, label: 'Chat' },
-    { id: 'cars', icon: <Car size={14} />, label: 'Vehículos' },
-    { id: 'members', icon: <Users size={14} />, label: `${members.length}` },
+    { id: 'chat', icon: <MessageCircle size={15} />, label: 'Chat' },
+    { id: 'cars', icon: <Car size={15} />, label: 'Vehículos' },
+    { id: 'members', icon: <Users size={15} />, label: `${members.length}` },
   ]
 
   return (
     <div>
       <button onClick={onBack} style={{ ...css.btnOutline, marginBottom: 12 }}><ChevronLeft size={16} /> Grupos</button>
-      <h2 style={{ ...css.h1, fontSize: isMobile ? 20 : 24, marginBottom: 16 }}>{group.name}</h2>
+
+      {/* Group header card */}
+      <div style={{
+        ...css.card, padding: isMobile ? 16 : 20, marginBottom: 16,
+        background: `linear-gradient(135deg, ${theme.accentSoft}, ${theme.card})`,
+        border: `1px solid ${theme.accent}33`,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ background: theme.accent, borderRadius: 14, padding: 12, display: 'flex' }}>
+            <Users size={24} color="#000" />
+          </div>
+          <div style={{ flex: 1 }}>
+            <h2 style={{ ...css.h1, fontSize: isMobile ? 20 : 24, marginBottom: 2 }}>{group.name}</h2>
+            <p style={{ fontSize: 12, color: theme.muted }}>
+              {members.length} miembro{members.length !== 1 ? 's' : ''}
+              {group.created_by === user.id && <span style={{ color: theme.accent, fontWeight: 600 }}> · Eres el admin</span>}
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* Tab bar */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: theme.bg, borderRadius: 10, padding: 4 }}>
@@ -190,14 +213,14 @@ function GroupDetail({ group, user, onBack, onToast, isMobile }) {
             display: 'flex', alignItems: 'center', gap: 5, flex: 1, justifyContent: 'center',
             background: tab === t.id ? theme.card : 'transparent', color: tab === t.id ? theme.white : theme.muted,
             border: tab === t.id ? `1px solid ${theme.border}` : '1px solid transparent',
-            borderRadius: 8, padding: '8px 12px', cursor: 'pointer', fontWeight: 600, fontSize: 13, fontFamily: 'inherit',
+            borderRadius: 8, padding: isMobile ? '10px 12px' : '9px 16px', cursor: 'pointer', fontWeight: 600, fontSize: 13, fontFamily: 'inherit',
           }}>{t.icon} {t.label}</button>
         ))}
       </div>
 
       {/* Chat Tab */}
       {tab === 'chat' && (
-        <div style={{ ...css.card, padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', height: isMobile ? 'calc(100vh - 240px)' : 480 }}>
+        <div style={{ ...css.card, padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', height: isMobile ? 'calc(100vh - 320px)' : 480 }}>
           <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
             {messages.length === 0 && <p style={{ color: theme.muted, textAlign: 'center', padding: 40, fontSize: 13 }}>Sin mensajes aún. ¡Escribe el primero!</p>}
             {messages.map(m => {
@@ -205,13 +228,14 @@ function GroupDetail({ group, user, onBack, onToast, isMobile }) {
               return (
                 <div key={m.id} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start', marginBottom: 8 }}>
                   <div style={{
-                    maxWidth: '75%', padding: '8px 12px', borderRadius: 12,
-                    background: isMe ? theme.accent + '22' : theme.bg,
-                    borderBottomRightRadius: isMe ? 4 : 12, borderBottomLeftRadius: isMe ? 12 : 4,
+                    maxWidth: '75%', padding: '8px 12px', borderRadius: 14,
+                    background: isMe ? theme.accent : theme.bg,
+                    color: isMe ? '#000' : theme.text,
+                    borderBottomRightRadius: isMe ? 4 : 14, borderBottomLeftRadius: isMe ? 14 : 4,
                   }}>
                     {!isMe && <div style={{ fontSize: 11, fontWeight: 700, color: theme.accent, marginBottom: 2 }}>{m.profiles?.name}</div>}
-                    <div style={{ fontSize: 13, color: theme.text, wordBreak: 'break-word' }}>{m.message}</div>
-                    <div style={{ fontSize: 10, color: theme.mutedLight, marginTop: 2, textAlign: 'right' }}>
+                    <div style={{ fontSize: 13, wordBreak: 'break-word' }}>{m.message}</div>
+                    <div style={{ fontSize: 10, opacity: 0.7, marginTop: 2, textAlign: 'right' }}>
                       {new Date(m.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
                     </div>
                   </div>
@@ -235,6 +259,12 @@ function GroupDetail({ group, user, onBack, onToast, isMobile }) {
       {/* Cars Tab */}
       {tab === 'cars' && (
         <div>
+          {members.every(m => (memberCars[m.user_id] || []).length === 0) && (
+            <div style={{ ...css.card, padding: 40, textAlign: 'center' }}>
+              <Car size={36} color={theme.mutedLight} style={{ marginBottom: 10 }} />
+              <p style={{ color: theme.muted, fontSize: 13 }}>Ningún miembro tiene vehículos todavía</p>
+            </div>
+          )}
           {members.map(m => {
             const cars = memberCars[m.user_id] || []
             const profile = m.profiles
@@ -277,41 +307,75 @@ function GroupDetail({ group, user, onBack, onToast, isMobile }) {
       {/* Members Tab */}
       {tab === 'members' && (
         <div>
-          {isAdmin && nonMembers.length > 0 && (
-            <button onClick={() => setShowAddMember(true)} style={{ ...css.btn(), marginBottom: 12 }}>
-              <UserPlus size={14} /> Añadir miembro
+          {isGroupAdmin && (
+            <button onClick={() => setShowInvite(true)} style={{ ...css.btn(), marginBottom: 12 }}>
+              <UserPlus size={14} /> Invitar gente
             </button>
           )}
+
+          {/* Members */}
           <div style={{ display: 'grid', gap: 8 }}>
-            {members.map(m => (
-              <div key={m.id} style={{ ...css.card, padding: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 0 }}>
-                <div>
-                  <span style={{ fontWeight: 600, fontSize: 14 }}>{m.profiles?.name}</span>
-                  <span style={{ color: theme.muted, fontSize: 12, marginLeft: 8 }}>@{m.profiles?.username}</span>
-                  <div style={{ fontSize: 12, color: theme.muted, marginTop: 2 }}>
-                    {(memberCars[m.user_id] || []).length} coche{(memberCars[m.user_id] || []).length !== 1 ? 's' : ''}
+            {members.map(m => {
+              const isGroupOwner = m.user_id === group.created_by
+              return (
+                <div key={m.id} style={{ ...css.card, padding: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ background: isGroupOwner ? theme.accentSoft : theme.bg, borderRadius: 8, padding: 8, display: 'flex' }}>
+                      {isGroupOwner ? <Crown size={16} color={theme.accent} /> : <Users size={16} color={theme.muted} />}
+                    </div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 600, fontSize: 14 }}>{m.profiles?.name}</span>
+                        {isGroupOwner && <span style={css.badge(theme.accentSoft, theme.accent)}>Admin</span>}
+                        {m.user_id === user.id && <span style={{ color: theme.muted, fontSize: 12 }}>(tú)</span>}
+                      </div>
+                      <div style={{ fontSize: 12, color: theme.muted, marginTop: 2 }}>
+                        @{m.profiles?.username} · {(memberCars[m.user_id] || []).length} vehículo{(memberCars[m.user_id] || []).length !== 1 ? 's' : ''}
+                      </div>
+                    </div>
                   </div>
+                  {isGroupAdmin && m.user_id !== group.created_by && (
+                    <button onClick={() => handleRemoveMember(m.user_id)} style={css.btnSm(theme.redSoft, theme.red)}><Trash2 size={12} /></button>
+                  )}
                 </div>
-                {isAdmin && m.user_id !== user.id && (
-                  <button onClick={() => handleRemoveMember(m.user_id)} style={css.btnSm(theme.redSoft, theme.red)}><Trash2 size={12} /></button>
-                )}
-              </div>
-            ))}
+              )
+            })}
           </div>
 
-          {/* Add member modal */}
-          <Modal open={showAddMember} onClose={() => setShowAddMember(false)} title="Añadir miembro">
-            {nonMembers.length === 0 ? (
-              <p style={{ color: theme.muted, textAlign: 'center', padding: 20 }}>Todos los usuarios ya están en el grupo</p>
+          {/* Pending invitations */}
+          {isGroupAdmin && invitations.length > 0 && (
+            <>
+              <h3 style={{ ...css.h3, fontSize: 13, marginTop: 20, marginBottom: 8, color: theme.muted }}>
+                <Clock size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} /> Invitaciones pendientes ({invitations.length})
+              </h3>
+              <div style={{ display: 'grid', gap: 8 }}>
+                {invitations.map(inv => (
+                  <div key={inv.id} style={{ ...css.card, padding: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 0, opacity: 0.85 }}>
+                    <div>
+                      <span style={{ fontWeight: 600, fontSize: 13 }}>{inv.profiles?.name}</span>
+                      <span style={{ color: theme.muted, fontSize: 12, marginLeft: 8 }}>@{inv.profiles?.username}</span>
+                    </div>
+                    <span style={css.badge(theme.yellowSoft, theme.yellow)}><Clock size={10} /> Esperando</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Invite modal */}
+          <Modal open={showInvite} onClose={() => setShowInvite(false)} title="Invitar gente">
+            <p style={{ ...css.subtitle, marginBottom: 12 }}>La persona recibirá una invitación y decide si entra o no.</p>
+            {invitable.length === 0 ? (
+              <p style={{ color: theme.muted, textAlign: 'center', padding: 20 }}>No hay nadie más a quien invitar</p>
             ) : (
               <div style={{ display: 'grid', gap: 8 }}>
-                {nonMembers.map(p => (
+                {invitable.map(p => (
                   <div key={p.id} style={{ ...css.card, padding: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 0 }}>
                     <div>
                       <span style={{ fontWeight: 600 }}>{p.name}</span>
                       <span style={{ color: theme.muted, fontSize: 12, marginLeft: 8 }}>@{p.username}</span>
                     </div>
-                    <button onClick={() => handleAddMember(p.id)} style={css.btnSm(theme.accent, '#000')}><Plus size={12} /> Añadir</button>
+                    <button onClick={() => handleInvite(p.id)} style={css.btnSm(theme.accent, '#000')}><Mail size={12} /> Invitar</button>
                   </div>
                 ))}
               </div>
@@ -327,6 +391,8 @@ function GroupDetail({ group, user, onBack, onToast, isMobile }) {
 export default function Groups({ user, onToast }) {
   const mob = useIsMobile()
   const [groups, setGroups] = useState([])
+  const [invitations, setInvitations] = useState([])
+  const [memberCounts, setMemberCounts] = useState({})
   const [loading, setLoading] = useState(true)
   const [showNew, setShowNew] = useState(false)
   const [newName, setNewName] = useState('')
@@ -335,8 +401,17 @@ export default function Groups({ user, onToast }) {
   const isAdmin = user.role === 'admin'
 
   const load = async () => {
-    try { setGroups(await getGroups(user.id)) }
-    catch (err) { onToast('Error: ' + err.message, 'error') }
+    try {
+      const [gs, invs] = await Promise.all([getGroups(user.id), getMyInvitations(user.id)])
+      setGroups(gs)
+      setInvitations(invs)
+      // Member counts
+      const counts = {}
+      for (const g of gs) {
+        try { counts[g.id] = (await getGroupMembers(g.id)).length } catch { counts[g.id] = 0 }
+      }
+      setMemberCounts(counts)
+    } catch (err) { onToast('Error: ' + err.message, 'error') }
     finally { setLoading(false) }
   }
 
@@ -346,8 +421,14 @@ export default function Groups({ user, onToast }) {
     if (!newName.trim()) return
     setSaving(true)
     try {
-      await createGroup(newName.trim(), user.id)
-      setNewName(''); setShowNew(false); onToast('Grupo creado'); load()
+      if (isAdmin) {
+        await createGroup(newName.trim(), user.id)
+        onToast('Grupo creado')
+      } else {
+        await requestGroup(newName.trim(), user.id)
+        onToast('Solicitud enviada — un admin la revisará')
+      }
+      setNewName(''); setShowNew(false); load()
     } catch (err) { onToast('Error: ' + err.message, 'error') }
     finally { setSaving(false) }
   }
@@ -355,6 +436,16 @@ export default function Groups({ user, onToast }) {
   const handleDelete = async (id) => {
     if (!confirm('¿Eliminar este grupo y todos sus mensajes?')) return
     try { await deleteGroup(id); onToast('Grupo eliminado'); load() }
+    catch (err) { onToast('Error: ' + err.message, 'error') }
+  }
+
+  const handleAcceptInvite = async (inv) => {
+    try { await acceptInvitation(inv.id, inv.group_id, user.id); onToast(`Te has unido a "${inv.groups?.name}"`); load() }
+    catch (err) { onToast('Error: ' + err.message, 'error') }
+  }
+
+  const handleRejectInvite = async (inv) => {
+    try { await rejectInvitation(inv.id); onToast('Invitación rechazada'); load() }
     catch (err) { onToast('Error: ' + err.message, 'error') }
   }
 
@@ -376,60 +467,127 @@ export default function Groups({ user, onToast }) {
         <div style={{ ...css.flexBetween, marginBottom: 20, gap: 12 }}>
           <div>
             <h1 style={{ ...css.h1, fontSize: mob ? 22 : 26 }}>Grupos</h1>
-            <p style={css.subtitle}>{groups.length} grupo{groups.length !== 1 ? 's' : ''}</p>
+            <p style={css.subtitle}>Comparte tus vehículos y chatea con tu gente</p>
           </div>
-          {isAdmin && (
-            <button onClick={() => setShowNew(true)} style={css.btn()}><Plus size={16} /> Crear grupo</button>
-          )}
+          <button onClick={() => setShowNew(true)} style={css.btn()}>
+            <Plus size={16} /> {isAdmin ? 'Crear grupo' : 'Solicitar grupo'}
+          </button>
         </div>
 
+        {/* Pending invitations */}
+        {invitations.length > 0 && (
+          <div style={{ marginBottom: 24 }}>
+            <h3 style={{ ...css.h3, fontSize: 14, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Inbox size={16} color={theme.accent} /> Invitaciones ({invitations.length})
+            </h3>
+            <div style={{ display: 'grid', gap: 10 }}>
+              {invitations.map(inv => (
+                <div key={inv.id} style={{
+                  ...css.card, padding: mob ? 14 : 18, marginBottom: 0,
+                  background: `linear-gradient(135deg, ${theme.accentSoft}, ${theme.card})`,
+                  border: `1px solid ${theme.accent}44`,
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ background: theme.accent, borderRadius: 12, padding: 10, display: 'flex' }}>
+                        <Sparkles size={20} color="#000" />
+                      </div>
+                      <div>
+                        <h3 style={{ ...css.h3, marginBottom: 2 }}>{inv.groups?.name}</h3>
+                        <p style={{ fontSize: 12, color: theme.muted }}>
+                          Te ha invitado {inv.inviter?.name || inv.groups?.profiles?.name || 'alguien'}
+                        </p>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button onClick={() => handleAcceptInvite(inv)} style={css.btn(theme.green, '#fff')}>
+                        <Check size={14} /> Unirme
+                      </button>
+                      <button onClick={() => handleRejectInvite(inv)} style={css.btn(theme.redSoft, theme.red)}>
+                        <X size={14} /> Rechazar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* My groups */}
         {groups.length === 0 ? (
-          <div style={{ ...css.card, padding: 40, textAlign: 'center' }}>
-            <Users size={40} color={theme.mutedLight} style={{ marginBottom: 12 }} />
-            <p style={{ color: theme.muted, fontSize: 13 }}>
-              {isAdmin ? 'No hay grupos. Crea uno para empezar.' : 'Aún no estás en ningún grupo.'}
+          <div style={{ ...css.card, padding: 48, textAlign: 'center' }}>
+            <div style={{ background: theme.accentSoft, borderRadius: 16, padding: 16, display: 'inline-flex', marginBottom: 14 }}>
+              <Users size={36} color={theme.accent} />
+            </div>
+            <h3 style={{ ...css.h3, marginBottom: 6 }}>Aún no estás en ningún grupo</h3>
+            <p style={{ color: theme.muted, fontSize: 13, maxWidth: 320, margin: '0 auto 16px' }}>
+              {isAdmin
+                ? 'Crea un grupo para compartir vehículos y chatear con tu gente.'
+                : 'Solicita crear un grupo (lo aprobará un admin) o espera a que alguien te invite.'}
             </p>
-            {isAdmin && <button onClick={() => setShowNew(true)} style={{ ...css.btn(), marginTop: 12 }}><Plus size={14} /> Crear grupo</button>}
+            <button onClick={() => setShowNew(true)} style={css.btn()}>
+              <Plus size={14} /> {isAdmin ? 'Crear grupo' : 'Solicitar grupo'}
+            </button>
           </div>
         ) : (
-          <div style={{ display: 'grid', gap: 10 }}>
-            {groups.map(g => (
-              <div key={g.id} onClick={() => setActiveGroup(g)}
-                style={{ ...css.card, padding: mob ? 14 : 20, cursor: 'pointer', transition: 'all .15s', marginBottom: 0 }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = theme.accent }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = theme.border }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ background: theme.accentSoft, borderRadius: 10, padding: 10, display: 'flex' }}>
-                      <Users size={20} color={theme.accent} />
+          <div style={{ display: 'grid', gridTemplateColumns: mob ? '1fr' : 'repeat(2, 1fr)', gap: 12 }}>
+            {groups.map(g => {
+              const isOwner = g.created_by === user.id
+              const count = memberCounts[g.id] || 0
+              return (
+                <div key={g.id} onClick={() => setActiveGroup(g)}
+                  style={{ ...css.card, padding: mob ? 16 : 20, cursor: 'pointer', transition: 'all .15s', marginBottom: 0, position: 'relative', overflow: 'hidden' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = theme.accent; e.currentTarget.style.transform = 'translateY(-2px)' }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = theme.border; e.currentTarget.style.transform = 'translateY(0)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+                    <div style={{ background: theme.accentSoft, borderRadius: 12, padding: 11, display: 'flex' }}>
+                      <Users size={22} color={theme.accent} />
                     </div>
-                    <div>
-                      <h3 style={css.h3}>{g.name}</h3>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <h3 style={{ ...css.h3, fontSize: 16 }}>{g.name}</h3>
+                        {isOwner && <span style={css.badge(theme.accentSoft, theme.accent)}><Crown size={10} /> Admin</span>}
+                      </div>
                       <p style={{ fontSize: 12, color: theme.muted, marginTop: 2 }}>
                         Creado por {g.profiles?.name || 'admin'}
                       </p>
                     </div>
+                    {isAdmin && (
+                      <button onClick={e => { e.stopPropagation(); handleDelete(g.id) }}
+                        style={css.btnSm(theme.redSoft, theme.red)}><Trash2 size={12} /></button>
+                    )}
                   </div>
-                  {isAdmin && (
-                    <button onClick={e => { e.stopPropagation(); handleDelete(g.id) }}
-                      style={css.btnSm(theme.redSoft, theme.red)}><Trash2 size={12} /></button>
-                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 12, color: theme.muted, borderTop: `1px solid ${theme.border}`, paddingTop: 12 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <Users size={13} /> {count} miembro{count !== 1 ? 's' : ''}
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <MessageCircle size={13} /> Chat
+                    </span>
+                    <span style={{ marginLeft: 'auto', color: theme.accent, fontWeight: 600 }}>Abrir →</span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
 
-      <Modal open={showNew} onClose={() => setShowNew(false)} title="Nuevo Grupo">
+      <Modal open={showNew} onClose={() => setShowNew(false)} title={isAdmin ? 'Nuevo grupo' : 'Solicitar grupo'}>
+        {!isAdmin && (
+          <p style={{ ...css.subtitle, marginBottom: 12 }}>
+            Tu solicitud la revisará un administrador. Si la aprueba, serás el admin del grupo y podrás invitar a quien quieras.
+          </p>
+        )}
         <Field label="Nombre del grupo">
           <input style={css.input} value={newName} onChange={e => setNewName(e.target.value)}
-            placeholder="Ej: Los Pibes" onKeyDown={e => e.key === 'Enter' && handleCreate()} />
+            placeholder="Ej: Los Pibes" autoFocus onKeyDown={e => e.key === 'Enter' && handleCreate()} />
         </Field>
         <div style={{ ...css.flex, justifyContent: 'flex-end', marginTop: 8, gap: 8 }}>
           <button onClick={() => setShowNew(false)} style={css.btnOutline}>Cancelar</button>
           <button onClick={handleCreate} disabled={saving} style={css.btn()}>
-            <Save size={14} /> {saving ? 'Creando...' : 'Crear'}
+            <Save size={14} /> {saving ? 'Enviando...' : (isAdmin ? 'Crear' : 'Solicitar')}
           </button>
         </div>
       </Modal>

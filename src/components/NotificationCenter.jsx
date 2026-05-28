@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Bell, X, AlertTriangle, Clock, ShieldAlert, ChevronRight } from 'lucide-react'
 import { theme, css } from '../lib/theme.js'
-import { getCars, getMaintenanceRecords, getItvRecords, getReminders } from '../lib/supabase.js'
+import { getCars, getMaintenanceRecords, getItvRecords, getReminders, getMyInvitations } from '../lib/supabase.js'
 import { MAINT_TYPES, getMaintStatus, formatDate } from '../lib/constants.js'
 
 export default function NotificationCenter({ userId, isMobile, dataVersion }) {
@@ -120,6 +120,19 @@ export default function NotificationCenter({ userId, isMobile, dataVersion }) {
           })
         }
       })
+
+      // Group invitations
+      try {
+        const invitations = await getMyInvitations(userId)
+        invitations.forEach(inv => {
+          allAlerts.push({
+            id: `inv-${inv.id}`, type: 'info', icon: '👥',
+            title: `Invitación a "${inv.groups?.name}"`, vehicle: '✨ Grupo',
+            detail: `Te ha invitado ${inv.inviter?.name || 'alguien'} · ve a Grupos`,
+            priority: 2,
+          })
+        })
+      } catch {}
 
       // Sort: danger first, then warning, then info
       allAlerts.sort((a, b) => a.priority - b.priority)

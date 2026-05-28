@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, Trash2, Save, Users, Car, Key, BarChart3, ShieldCheck } from 'lucide-react'
+import { Plus, Trash2, Save, Users, Car, Key, BarChart3, ShieldCheck, Edit2, Check, X, UserCog, Inbox } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { theme, css } from '../lib/theme.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
-import { getProfiles, createProfile, deleteProfile, updateProfile, getCars, getMaintenanceRecords } from '../lib/supabase.js'
-import { getMaintStatus } from '../lib/constants.js'
+import { getProfiles, createProfile, deleteProfile, updateProfile, getCars, getMaintenanceRecords, getPendingGroups, approveGroup, rejectGroup } from '../lib/supabase.js'
+import { getMaintStatus, formatDate } from '../lib/constants.js'
 import { Modal, Field, Loader, Stat } from './ui.jsx'
 
 const COLORS = ['#f59e0b', '#3b82f6', '#22c55e', '#ef4444', '#8b5cf6']
@@ -29,6 +29,11 @@ export default function AdminPanel({ onToast }) {
   const [newUser, setNewUser] = useState({ name: '', username: '', pin: '1234', role: 'user' })
   const [saving, setSaving] = useState(false)
   const [tab, setTab] = useState('users')
+  const [editUser, setEditUser] = useState(null)         // user object being edited
+  const [editForm, setEditForm] = useState({ name: '', username: '', role: 'user' })
+  const [resetPinUser, setResetPinUser] = useState(null) // user object for PIN reset
+  const [newPin, setNewPin] = useState('')
+  const [pendingGroups, setPendingGroups] = useState([])
 
   const loadAll = async () => {
     try {
@@ -46,6 +51,7 @@ export default function AdminPanel({ onToast }) {
       }
       setAllCars(cars)
       setAllMaint(maints)
+      try { setPendingGroups(await getPendingGroups()) } catch {}
     } catch (err) { onToast('Error: ' + err.message, 'error') }
     finally { setLoading(false) }
   }
@@ -75,6 +81,48 @@ export default function AdminPanel({ onToast }) {
     catch (err) { onToast('Error: ' + err.message, 'error') }
   }
 
+  const openEdit = (u) => {
+    setEditUser(u)
+    setEditForm({ name: u.name, username: u.username, role: u.role })
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editForm.name.trim() || !editForm.username.trim()) return
+    setSaving(true)
+    try {
+      await updateProfile(editUser.id, {
+        name: editForm.name.trim(),
+        username: editForm.username.trim().toLowerCase(),
+        role: editForm.role,
+      })
+      setEditUser(null); onToast('Usuario actualizado'); loadAll()
+    } catch (err) { onToast('Error: ' + (err.message?.includes('duplicate') ? 'Ese usuario ya existe' : err.message), 'error') }
+    finally { setSaving(false) }
+  }
+
+  const handleSaveResetPin = async () => {
+    if (newPin.length < 4) return onToast('El PIN debe tener al menos 4 dígitos', 'error')
+    setSaving(true)
+    try {
+      // Reset PIN + force change on next login for security
+      await updateProfile(resetPinUser.id, { pin: newPin, pin_change_required: true })
+      setResetPinUser(null); setNewPin('')
+      onToast('PIN restablecido — el usuario deberá cambiarlo al entrar'); loadAll()
+    } catch (err) { onToast('Error: ' + err.message, 'error') }
+    finally { setSaving(false) }
+  }
+
+  const handleApproveGroup = async (g) => {
+    try { await approveGroup(g.id, g.created_by); onToast(`Grupo "${g.name}" aprobado`); loadAll() }
+    catch (err) { onToast('Error: ' + err.message, 'error') }
+  }
+
+  const handleRejectGroup = async (g) => {
+    if (!confirm(`¿Rechazar la solicitud del grupo "${g.name}"?`)) return
+    try { await rejectGroup(g.id); onToast('Solicitud rechazada'); loadAll() }
+    catch (err) { onToast('Error: ' + err.message, 'error') }
+  }
+
   // Stats
   const stats = useMemo(() => {
     const totalKm = allCars.reduce((s, c) => s + (c.current_km || 0), 0)
@@ -94,6 +142,7 @@ export default function AdminPanel({ onToast }) {
 
   const tabs = [
     { id: 'users', icon: <Users size={14} />, label: 'Usuarios' },
+    { id: 'groups', icon: <Inbox size={14} />, label: 'Grupos', badge: pendingGroups.length > 0 ? pendingGroups.length : null },
     { id: 'stats', icon: <BarChart3 size={14} />, label: 'Estadísticas' },
   ]
 
@@ -110,7 +159,16 @@ export default function AdminPanel({ onToast }) {
               background: tab === t.id ? theme.card : 'transparent', color: tab === t.id ? theme.text : theme.muted,
               border: tab === t.id ? `1px solid ${theme.border}` : '1px solid transparent',
               borderRadius: 8, padding: '8px 12px', cursor: 'pointer', fontWeight: 600, fontSize: 13, fontFamily: 'inherit',
-            }}>{t.icon} {t.label}</button>
+            }}>
+              {t.icon} {t.label}
+              {t.badge && (
+                <span style={{
+                  background: theme.red, color: '#fff', borderRadius: 10, minWidth: 18, height: 18,
+                  padding: '0 5px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 10, fontWeight: 800,
+                }}>{t.badge}</span>
+              )}
+            </button>
           ))}
         </div>
 
@@ -138,14 +196,20 @@ export default function AdminPanel({ onToast }) {
                           @{u.username} · {uCars.length} vehículo{uCars.length !== 1 ? 's' : ''}
                         </p>
                       </div>
-                      {u.role !== 'admin' && (
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          <button onClick={() => handleForcePin(u.id, u.name)} title="Forzar cambio de PIN"
-                            style={css.btnSm(theme.yellowSoft, theme.yellow)}><Key size={12} /></button>
-                          <button onClick={() => handleDelete(u.id, u.name)}
-                            style={css.btnSm(theme.redSoft, theme.red)}><Trash2 size={12} /></button>
-                        </div>
-                      )}
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <button onClick={() => openEdit(u)} title="Editar usuario"
+                          style={css.btnSm(theme.accentSoft, theme.accent)}><Edit2 size={12} /></button>
+                        <button onClick={() => { setResetPinUser(u); setNewPin('') }} title="Restablecer PIN"
+                          style={css.btnSm('rgba(59,130,246,0.12)', '#3b82f6')}><Key size={12} /></button>
+                        {u.role !== 'admin' && (
+                          <>
+                            <button onClick={() => handleForcePin(u.id, u.name)} title="Forzar cambio de PIN"
+                              style={css.btnSm(theme.yellowSoft, theme.yellow)}><UserCog size={12} /></button>
+                            <button onClick={() => handleDelete(u.id, u.name)} title="Eliminar"
+                              style={css.btnSm(theme.redSoft, theme.red)}><Trash2 size={12} /></button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )
@@ -162,6 +226,95 @@ export default function AdminPanel({ onToast }) {
                 <button onClick={handleAdd} disabled={saving} style={css.btn()}><Save size={14} /> {saving ? 'Creando...' : 'Crear'}</button>
               </div>
             </Modal>
+
+            {/* Edit user modal */}
+            <Modal open={!!editUser} onClose={() => setEditUser(null)} title="Editar usuario">
+              <Field label="Nombre">
+                <input style={css.input} value={editForm.name}
+                  onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} placeholder="Nombre" />
+              </Field>
+              <Field label="Usuario">
+                <input style={css.input} value={editForm.username}
+                  onChange={e => setEditForm(p => ({ ...p, username: e.target.value }))} placeholder="nombre_usuario" />
+              </Field>
+              <Field label="Rol">
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {['user', 'admin'].map(r => (
+                    <button key={r} type="button" onClick={() => setEditForm(p => ({ ...p, role: r }))} style={{
+                      ...css.btn(editForm.role === r ? (r === 'admin' ? theme.accent : theme.green) : theme.bg,
+                                 editForm.role === r ? '#000' : theme.muted),
+                      flex: 1, justifyContent: 'center',
+                      border: `1px solid ${editForm.role === r ? (r === 'admin' ? theme.accent : theme.green) : theme.border}`,
+                    }}>{r === 'admin' ? '🛡️ Admin' : '👤 Usuario'}</button>
+                  ))}
+                </div>
+              </Field>
+              <div style={{ ...css.flex, justifyContent: 'flex-end', marginTop: 16, gap: 8 }}>
+                <button onClick={() => setEditUser(null)} style={css.btnOutline}>Cancelar</button>
+                <button onClick={handleSaveEdit} disabled={saving} style={css.btn()}><Save size={14} /> {saving ? 'Guardando...' : 'Guardar'}</button>
+              </div>
+            </Modal>
+
+            {/* Reset PIN modal */}
+            <Modal open={!!resetPinUser} onClose={() => setResetPinUser(null)} title="Restablecer PIN">
+              <p style={{ ...css.subtitle, marginBottom: 16 }}>
+                Establece un PIN nuevo para <strong style={{ color: theme.text }}>{resetPinUser?.name}</strong>.
+                Se le pedirá cambiarlo la próxima vez que entre.
+              </p>
+              <Field label="Nuevo PIN">
+                <input style={css.input} inputMode="numeric" pattern="[0-9]*" type="text" value={newPin}
+                  onChange={e => setNewPin(e.target.value.replace(/[^\d]/g, ''))}
+                  placeholder="Mínimo 4 dígitos"
+                  onKeyDown={e => e.key === 'Enter' && handleSaveResetPin()} />
+              </Field>
+              <div style={{ ...css.flex, justifyContent: 'flex-end', marginTop: 16, gap: 8 }}>
+                <button onClick={() => setResetPinUser(null)} style={css.btnOutline}>Cancelar</button>
+                <button onClick={handleSaveResetPin} disabled={saving || newPin.length < 4} style={css.btn()}><Key size={14} /> {saving ? 'Guardando...' : 'Restablecer'}</button>
+              </div>
+            </Modal>
+          </>
+        )}
+
+        {/* ─── GRUPOS TAB ─── */}
+        {tab === 'groups' && (
+          <>
+            <p style={{ ...css.subtitle, marginBottom: 16 }}>
+              Solicitudes de grupo pendientes de aprobación. Al aprobar, el solicitante se convierte en administrador del grupo y puede invitar a más gente.
+            </p>
+            {pendingGroups.length === 0 ? (
+              <div style={{ ...css.card, padding: 40, textAlign: 'center' }}>
+                <Inbox size={40} color={theme.mutedLight} style={{ marginBottom: 12 }} />
+                <p style={{ color: theme.muted, fontSize: 13 }}>No hay solicitudes pendientes</p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: 10 }}>
+                {pendingGroups.map(g => (
+                  <div key={g.id} style={{ ...css.card, padding: mob ? 14 : 18, marginBottom: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ background: theme.yellowSoft, borderRadius: 10, padding: 10, display: 'flex' }}>
+                          <Users size={20} color={theme.yellow} />
+                        </div>
+                        <div>
+                          <h3 style={{ ...css.h3, marginBottom: 2 }}>{g.name}</h3>
+                          <p style={{ fontSize: 12, color: theme.muted }}>
+                            Solicitado por {g.profiles?.name || '—'} · {formatDate(g.created_at?.split('T')[0])}
+                          </p>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button onClick={() => handleApproveGroup(g)} style={css.btn(theme.green, '#fff')}>
+                          <Check size={14} /> Aprobar
+                        </button>
+                        <button onClick={() => handleRejectGroup(g)} style={css.btn(theme.redSoft, theme.red)}>
+                          <X size={14} /> Rechazar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </>
         )}
 

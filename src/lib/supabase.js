@@ -403,24 +403,67 @@ export async function deleteItvRecord(id) {
 
 // ─── Groups ───
 
+// Approved groups where the user is a member
 export async function getGroups(userId) {
   const { data, error } = await supabase
     .from('group_members')
-    .select('group_id, groups(id, name, created_by, created_at, profiles(name))')
+    .select('group_id, groups(id, name, created_by, created_at, status, profiles(name))')
     .eq('user_id', userId)
   if (error) throw error
-  return data.map(gm => gm.groups).filter(Boolean)
+  return data
+    .map(gm => gm.groups)
+    .filter(g => g && g.status === 'approved')
 }
 
+// Site-admin creates a group directly (already approved)
 export async function createGroup(name, createdBy) {
   const { data, error } = await supabase
     .from('groups')
-    .insert({ name, created_by: createdBy })
+    .insert({ name, created_by: createdBy, status: 'approved' })
     .select()
     .single()
   if (error) throw error
   await supabase.from('group_members').insert({ group_id: data.id, user_id: createdBy })
   return data
+}
+
+// Normal user requests a group (pending approval)
+export async function requestGroup(name, createdBy) {
+  const { data, error } = await supabase
+    .from('groups')
+    .insert({ name, created_by: createdBy, status: 'pending' })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+// Site admin: list pending group requests
+export async function getPendingGroups() {
+  const { data, error } = await supabase
+    .from('groups')
+    .select('*, profiles(name, username)')
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data
+}
+
+// Site admin: approve a group → the requester becomes member + group admin
+export async function approveGroup(groupId, createdBy) {
+  const { error } = await supabase
+    .from('groups')
+    .update({ status: 'approved' })
+    .eq('id', groupId)
+  if (error) throw error
+  // Add creator as first member (ignore if already there)
+  await supabase.from('group_members').insert({ group_id: groupId, user_id: createdBy }).select()
+}
+
+// Site admin: reject a group request
+export async function rejectGroup(groupId) {
+  const { error } = await supabase.from('groups').delete().eq('id', groupId)
+  if (error) throw error
 }
 
 export async function deleteGroup(id) {
@@ -453,6 +496,76 @@ export async function removeGroupMember(groupId, userId) {
     .delete()
     .eq('group_id', groupId)
     .eq('user_id', userId)
+  if (error) throw error
+}
+
+// ─── Group invitations ───
+
+// Group admin invites a user
+export async function inviteToGroup(groupId, userId, invitedBy) {
+  // Upsert: if a previous rejected invite exists, reset it to pending
+  const { data: existing } = await supabase
+    .from('group_invitations')
+    .select('id')
+    .eq('group_id', groupId)
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (existing) {
+    const { data, error } = await supabase
+      .from('group_invitations')
+      .update({ status: 'pending', invited_by: invitedBy, created_at: new Date().toISOString() })
+      .eq('id', existing.id)
+      .select()
+      .single()
+    if (error) throw error
+    return data
+  }
+  const { data, error } = await supabase
+    .from('group_invitations')
+    .insert({ group_id: groupId, user_id: userId, invited_by: invitedBy, status: 'pending' })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+// Pending invitations for a user (to show "you've been invited")
+export async function getMyInvitations(userId) {
+  const { data, error } = await supabase
+    .from('group_invitations')
+    .select('*, groups(id, name, created_by, profiles(name)), inviter:invited_by(name)')
+    .eq('user_id', userId)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data
+}
+
+// Pending invitations for a group (so the admin sees who has a pending invite)
+export async function getGroupInvitations(groupId) {
+  const { data, error } = await supabase
+    .from('group_invitations')
+    .select('*, profiles:user_id(id, name, username)')
+    .eq('group_id', groupId)
+    .eq('status', 'pending')
+  if (error) throw error
+  return data
+}
+
+export async function acceptInvitation(invitationId, groupId, userId) {
+  const { error } = await supabase
+    .from('group_invitations')
+    .update({ status: 'accepted' })
+    .eq('id', invitationId)
+  if (error) throw error
+  await supabase.from('group_members').insert({ group_id: groupId, user_id: userId }).select()
+}
+
+export async function rejectInvitation(invitationId) {
+  const { error } = await supabase
+    .from('group_invitations')
+    .update({ status: 'rejected' })
+    .eq('id', invitationId)
   if (error) throw error
 }
 

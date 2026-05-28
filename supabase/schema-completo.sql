@@ -168,8 +168,10 @@ CREATE TABLE IF NOT EXISTS groups (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name        TEXT NOT NULL,
   created_by  UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  status      TEXT DEFAULT 'approved' CHECK (status IN ('pending', 'approved', 'rejected')),
   created_at  TIMESTAMPTZ DEFAULT now()
 );
+ALTER TABLE groups ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'approved';
 
 CREATE TABLE IF NOT EXISTS group_members (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -185,6 +187,16 @@ CREATE TABLE IF NOT EXISTS group_messages (
   user_id     UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   message     TEXT NOT NULL,
   created_at  TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS group_invitations (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  group_id    UUID NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  user_id     UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  invited_by  UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  status      TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected')),
+  created_at  TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(group_id, user_id)
 );
 
 
@@ -235,6 +247,8 @@ CREATE INDEX IF NOT EXISTS idx_itv_car ON itv_records(car_id);
 CREATE INDEX IF NOT EXISTS idx_group_members_group ON group_members(group_id);
 CREATE INDEX IF NOT EXISTS idx_group_members_user ON group_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_group_messages_group ON group_messages(group_id);
+CREATE INDEX IF NOT EXISTS idx_group_invitations_user ON group_invitations(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_group_invitations_group ON group_invitations(group_id);
 CREATE INDEX IF NOT EXISTS idx_vehicle_todos_car ON vehicle_todos(car_id);
 CREATE INDEX IF NOT EXISTS idx_vehicle_todos_completed ON vehicle_todos(car_id, completed);
 CREATE INDEX IF NOT EXISTS idx_reminders_user ON reminders(user_id);
@@ -256,6 +270,7 @@ ALTER TABLE workshops           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE groups              ENABLE ROW LEVEL SECURITY;
 ALTER TABLE group_members       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE group_messages      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE group_invitations   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vehicle_todos       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reminders           ENABLE ROW LEVEL SECURITY;
 
@@ -270,6 +285,7 @@ DROP POLICY IF EXISTS "workshops_all"       ON workshops;
 DROP POLICY IF EXISTS "groups_all"          ON groups;
 DROP POLICY IF EXISTS "group_members_all"   ON group_members;
 DROP POLICY IF EXISTS "group_messages_all"  ON group_messages;
+DROP POLICY IF EXISTS "group_invitations_all" ON group_invitations;
 DROP POLICY IF EXISTS "vehicle_todos_all"   ON vehicle_todos;
 DROP POLICY IF EXISTS "reminders_all"       ON reminders;
 
@@ -284,6 +300,7 @@ CREATE POLICY "workshops_all"       ON workshops           FOR ALL USING (true) 
 CREATE POLICY "groups_all"          ON groups              FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "group_members_all"   ON group_members       FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "group_messages_all"  ON group_messages      FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "group_invitations_all" ON group_invitations  FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "vehicle_todos_all"   ON vehicle_todos       FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "reminders_all"       ON reminders           FOR ALL USING (true) WITH CHECK (true);
 
