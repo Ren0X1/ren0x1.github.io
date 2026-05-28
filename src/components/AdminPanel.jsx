@@ -155,17 +155,19 @@ export default function AdminPanel({ onToast }) {
         <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: theme.bg, borderRadius: 10, padding: 4 }}>
           {tabs.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{
-              display: 'flex', alignItems: 'center', gap: 5, flex: 1, justifyContent: 'center',
+              display: 'flex', alignItems: 'center', gap: mob ? 4 : 5, flex: 1, justifyContent: 'center', minWidth: 0,
               background: tab === t.id ? theme.card : 'transparent', color: tab === t.id ? theme.text : theme.muted,
               border: tab === t.id ? `1px solid ${theme.border}` : '1px solid transparent',
-              borderRadius: 8, padding: '8px 12px', cursor: 'pointer', fontWeight: 600, fontSize: 13, fontFamily: 'inherit',
+              borderRadius: 8, padding: mob ? '8px 4px' : '8px 12px', cursor: 'pointer', fontWeight: 600,
+              fontSize: mob ? 12 : 13, fontFamily: 'inherit', whiteSpace: 'nowrap',
             }}>
-              {t.icon} {t.label}
+              {t.icon}
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.label}</span>
               {t.badge && (
                 <span style={{
-                  background: theme.red, color: '#fff', borderRadius: 10, minWidth: 18, height: 18,
+                  background: theme.red, color: '#fff', borderRadius: 10, minWidth: 17, height: 17,
                   padding: '0 5px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 10, fontWeight: 800,
+                  fontSize: 10, fontWeight: 800, flexShrink: 0,
                 }}>{t.badge}</span>
               )}
             </button>

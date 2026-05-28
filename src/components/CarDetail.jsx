@@ -24,31 +24,35 @@ const today = new Date().toISOString().split('T')[0]
 
 /* ── Tab Bar ── */
 function TabBar({ tabs, active, onChange, isMobile }) {
+  // On mobile, lay tabs out in a grid so they're ALL visible (no horizontal scroll).
+  // <=4 tabs -> single row; more -> 3 columns wrapping into rows.
+  const cols = tabs.length <= 4 ? tabs.length : 3
   return (
     <div style={{
-      display: 'flex', gap: 4, marginBottom: 16,
-      background: theme.bg, borderRadius: 10, padding: 4,
-      overflowX: isMobile ? 'auto' : 'visible',
-      scrollbarWidth: 'none',
-    }} className="tabbar-scroll">
+      marginBottom: 16, background: theme.bg, borderRadius: 10, padding: 4,
+      ...(isMobile
+        ? { display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 4 }
+        : { display: 'flex', gap: 4 }),
+    }}>
       {tabs.map(t => (
         <button key={t.id} onClick={() => onChange(t.id)} style={{
-          display: 'flex', alignItems: 'center', gap: isMobile ? 5 : 6,
-          flex: isMobile ? '0 0 auto' : 1, justifyContent: 'center',
+          display: 'flex', alignItems: 'center', gap: isMobile ? 4 : 6,
+          flex: isMobile ? undefined : 1, justifyContent: 'center',
           background: active === t.id ? theme.card : 'transparent',
           color: active === t.id ? theme.white : theme.muted,
           border: active === t.id ? `1px solid ${theme.border}` : '1px solid transparent',
-          borderRadius: 8, padding: isMobile ? '10px 14px' : '9px 16px', cursor: 'pointer', fontWeight: 600,
-          fontSize: isMobile ? 13 : 13, fontFamily: 'inherit', transition: 'all .15s', position: 'relative',
-          whiteSpace: 'nowrap',
+          borderRadius: 8, padding: isMobile ? '9px 6px' : '9px 16px', cursor: 'pointer', fontWeight: 600,
+          fontSize: isMobile ? 12 : 13, fontFamily: 'inherit', transition: 'all .15s', position: 'relative',
+          whiteSpace: 'nowrap', minWidth: 0,
         }}>
-          {t.icon} {t.label}
+          {t.icon}
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.label}</span>
           {t.badge && (
             <span style={{
               background: theme.accent, color: '#000', borderRadius: 10,
-              minWidth: 18, height: 18, padding: '0 5px',
+              minWidth: 17, height: 17, padding: '0 5px',
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 10, fontWeight: 800,
+              fontSize: 10, fontWeight: 800, flexShrink: 0,
             }}>{t.badge}</span>
           )}
         </button>
