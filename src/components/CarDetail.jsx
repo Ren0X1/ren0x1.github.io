@@ -417,9 +417,13 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
                       </div>
                     </button>
                     <div style={{ height: 1, background: theme.border }} />
-                    <button onClick={() => {
+                    <button onClick={async () => {
                       setShowExportMenu(false)
-                      exportCarExcel({ car, maintenance, kmLogs, fuelLogs, parts, itvRecords, todos })
+                      try {
+                        await exportCarExcel({ car, maintenance, kmLogs, fuelLogs, parts, itvRecords, todos })
+                      } catch (err) {
+                        onToast('Error al exportar Excel: ' + err.message, 'error')
+                      }
                     }} style={{
                       width: '100%', background: 'transparent', border: 'none',
                       padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10,
